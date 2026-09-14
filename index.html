@@ -41,7 +41,7 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 .lvl .st{margin-left:auto; font-size:22px; white-space:nowrap;}
 .lvl.lock{opacity:.55; cursor:not-allowed;}
 .lvl.l1{border-color:#ffd9d3;} .lvl.l2{border-color:#cdeee9;} .lvl.l3{border-color:#ffe9b8;}
-.lvl.l4{border-color:#d9c8ff;} .lvl.l5{border-color:#bfe3ff;}
+.lvl.l4{border-color:#d9c8ff;} .lvl.l5{border-color:#bfe3ff;} .lvl.l6{border-color:#ffc4d6;} .lvl.l7{border-color:#c4f0ff;}
 .sightcard h2{margin:0 0 4px;}
 .sightgrid{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
 .sw{border:2px solid var(--sky); background:#fff; border-radius:16px; padding:10px 16px;
@@ -207,11 +207,61 @@ const LEVELS = [
   story:[
     {t:"I see a zebra.",e:"🦓"},{t:"The van is red.",e:"🚐"},
     {t:"I like the song.",e:"🎵"},{t:"The moon is big.",e:"🌙"} ] },
+{ id:5, cls:"l6", emo:"🚢🐤☁️", name:"Level 6", desc:"6 new sounds · ship, chick, cloud",
+  letters:[
+    {l:"sh",w:"ship",e:"🚢"},
+    {l:"ch",w:"chick",e:"🐤"},
+    {l:"th",w:"thumb",e:"👍"},
+    {l:"qu",w:"queen",e:"👑"},
+    {l:"ou",w:"cloud",e:"☁️"},
+    {l:"oi",w:"coin",e:"🪙"}],
+  words:[
+    {w:"ship",e:"🚢"},
+    {w:"fish",e:"🐟"},
+    {w:"chick",e:"🐤"},
+    {w:"cheese",e:"🧀"},
+    {w:"thumb",e:"👍"},
+    {w:"bath",e:"🛁"},
+    {w:"queen",e:"👑"},
+    {w:"cloud",e:"☁️"},
+    {w:"house",e:"🏠"},
+    {w:"coin",e:"🪙"}],
+  story:[
+    {t:"I see the ship.",e:"🚢"},
+    {t:"The fish is in the dish.",e:"🐟"},
+    {t:"The queen is in the house.",e:"👑"},
+    {t:"I like the cloud.",e:"☁️"} ] },
+{ id:6, cls:"l7", emo:"🔍🚗💡", name:"Level 7", desc:"6 new sounds · clue, car, light",
+  letters:[
+    {l:"ue",w:"clue",e:"🔍"},
+    {l:"er",w:"fern",e:"🌿"},
+    {l:"ar",w:"car",e:"🚗"},
+    {l:"air",w:"chair",e:"🪑"},
+    {l:"ear",w:"bear",e:"🐻"},
+    {l:"igh",w:"light",e:"💡"}],
+  words:[
+    {w:"clue",e:"🔍"},
+    {w:"blue",e:"💙"},
+    {w:"fern",e:"🌿"},
+    {w:"tiger",e:"🐯"},
+    {w:"car",e:"🚗"},
+    {w:"star",e:"⭐"},
+    {w:"chair",e:"🪑"},
+    {w:"bear",e:"🐻"},
+    {w:"ear",e:"👂"},
+    {w:"light",e:"💡"}],
+  story:[
+    {t:"I see the light.",e:"💡"},
+    {t:"The bear is in the car.",e:"🐻"},
+    {t:"I like the blue star.",e:"⭐"},
+    {t:"The tiger is big.",e:"🐯"} ] },
 ];
 const SIGHT_WORDS=[
   {w:"I",e:""},{w:"a",e:""},{w:"the",e:""},{w:"is",e:""},
   {w:"see",e:"👀"},{w:"like",e:"❤️"},{w:"my",e:""},{w:"and",e:""},
   {w:"in",e:""},{w:"on",e:""},
+  {w:"you",e:""},{w:"said",e:""},{w:"was",e:""},{w:"are",e:""},{w:"they",e:""},
+  {w:"he",e:""},{w:"she",e:""},{w:"we",e:""},{w:"no",e:"🚫"},{w:"go",e:""},
 ];
 const STEP_DEFS = [
   {id:"letters", icon:"🔤", label:"Sounds"},
@@ -221,7 +271,7 @@ const STEP_DEFS = [
   {id:"story", icon:"📚", label:"Story"},
 ];
 /* split a word into its sound units (digraphs stay together): rain -> [r,ai,n] */
-const GRAPHEMES = ["ai","oa","ie","ee","or","ng","oo"];
+const GRAPHEMES = ["ai","oa","ie","ee","or","ng","oo","sh","ch","th","qu","ou","oi","ue","er","ar","air","ear","igh"];
 function segWord(w){
   const out=[], lw=w.toLowerCase(); let i=0;
   while(i<w.length){
