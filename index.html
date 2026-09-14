@@ -30,6 +30,7 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 .bubble .spk:active{transform:scale(.92);}
 .card{background:var(--paper); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; margin:0 0 16px;}
 .card h2{margin:0 0 4px; font-size:22px;}
+.note{color:var(--muted); font-size:14px; line-height:1.45;}
 .lvlgrid{display:grid; grid-template-columns:1fr; gap:14px;}
 .lvl{display:flex; align-items:center; gap:16px; background:var(--paper); border-radius:var(--radius);
   box-shadow:var(--shadow); padding:18px; cursor:pointer; border:3px solid transparent; text-align:left; width:100%; font:inherit;}
@@ -40,6 +41,15 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 .lvl .st{margin-left:auto; font-size:22px; white-space:nowrap;}
 .lvl.lock{opacity:.55; cursor:not-allowed;}
 .lvl.l1{border-color:#ffd9d3;} .lvl.l2{border-color:#cdeee9;} .lvl.l3{border-color:#ffe9b8;}
+.lvl.l4{border-color:#d9c8ff;} .lvl.l5{border-color:#bfe3ff;}
+.sightcard h2{margin:0 0 4px;}
+.sightgrid{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
+.sw{border:2px solid var(--sky); background:#fff; border-radius:16px; padding:10px 16px;
+  font:inherit; cursor:pointer; display:flex; align-items:center; gap:8px;
+  box-shadow:var(--shadow);}
+.sw:active{transform:scale(.96);}
+.sw .sww{font-size:20px; font-weight:800; color:var(--ink);}
+.sw .swe{font-size:24px;}
 .steptabs{display:flex; gap:8px; margin:0 0 16px; overflow-x:auto; padding-bottom:4px;}
 .steptabs::-webkit-scrollbar{display:none;}
 .stab{flex:1 0 auto; border:0; border-radius:16px; padding:10px 14px; font:inherit; font-weight:800; font-size:15px;
@@ -112,6 +122,10 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
       <div class="bubble"><button class="spk" data-say="Hello! I am Ollie. Tap a picture to start.">🔊</button>
       <span id="owlHome">Hello! I'm Ollie 🦉 Tap a level to begin.</span></div></div>
     <div class="lvlgrid" id="lvlgrid"></div>
+    <div class="card sightcard"><h2>👁️ Sight words</h2>
+      <p class="note" style="margin:4px 0 0">Words to know by heart — tap to hear them.</p>
+      <div class="sightgrid" id="sightgrid"></div>
+    </div>
     <div class="center"><span class="streak" id="streak">🔥 0 day streak</span></div>
   </main>
 </div>
@@ -158,7 +172,7 @@ const LEVELS = [
     {l:"d",w:"dog",e:"🐶"}],
   words:[
     {w:"cat",e:"🐱"},{w:"hat",e:"🎩"},{w:"map",e:"🗺️"},{w:"hen",e:"🐔"},
-    {w:"bed",e:"🛏️"},{w:"pen",e:"🖊️"},{w:"rat",e:"🐀"},{w:"ham",e:"🍖"}],
+    {w:"kid",e:"🧒"},{w:"pen",e:"🖊️"},{w:"rat",e:"🐀"},{w:"ham",e:"🍖"}],
   story:[
     {t:"The cat sat on the mat.",e:"🐱"},{t:"I see a red hen.",e:"🐔"},{t:"The kid has a pen.",e:"🖊️"} ] },
 { id:2, cls:"l3", emo:"🐐🐙☂️", name:"Level 3", desc:"6 more sounds · first stories",
@@ -167,9 +181,37 @@ const LEVELS = [
     {l:"l",w:"lion",e:"🦁"},{l:"f",w:"fish",e:"🐟"},{l:"b",w:"ball",e:"⚽"}],
   words:[
     {w:"dog",e:"🐶"},{w:"sun",e:"☀️"},{w:"pig",e:"🐷"},{w:"cup",e:"☕"},
-    {w:"bus",e:"🚌"},{w:"log",e:"🪵"},{w:"bug",e:"🐛"},{w:"tub",e:"🛁"}],
+    {w:"bus",e:"🚌"},{w:"log",e:"🪵"},{w:"bug",e:"🐛"},{w:"tub",e:"🛁"},
+    {w:"bed",e:"🛏️"}],
   story:[
     {t:"The dog ran.",e:"🐶"},{t:"A big pig in the mud.",e:"🐷"},{t:"The sun is hot.",e:"☀️"},{t:"I see a bus.",e:"🚌"} ] },
+{ id:3, cls:"l4", emo:"🌧️⛵🌳", name:"Level 4", desc:"6 digraphs · rain, boat, tree",
+  letters:[
+    {l:"ai",w:"rain",e:"🌧️"},{l:"j",w:"jar",e:"🏺"},{l:"oa",w:"boat",e:"⛵"},
+    {l:"ie",w:"pie",e:"🥧"},{l:"ee",w:"tree",e:"🌳"},{l:"or",w:"fork",e:"🍴"}],
+  words:[
+    {w:"rain",e:"🌧️"},{w:"boat",e:"⛵"},{w:"tree",e:"🌳"},{w:"pie",e:"🥧"},
+    {w:"fork",e:"🍴"},{w:"jar",e:"🏺"},{w:"coat",e:"🧥"},{w:"tie",e:"👔"},
+    {w:"seed",e:"🌱"},{w:"corn",e:"🌽"}],
+  story:[
+    {t:"I see a boat.",e:"⛵"},{t:"I like the rain.",e:"🌧️"},
+    {t:"See my pie.",e:"🥧"},{t:"The fork is in the jar.",e:"🍴"} ] },
+{ id:4, cls:"l5", emo:"🦓💍🌙", name:"Level 5", desc:"6 new sounds · zebra to the moon",
+  letters:[
+    {l:"z",w:"zebra",e:"🦓"},{l:"w",w:"whale",e:"🐳"},{l:"ng",w:"ring",e:"💍"},
+    {l:"v",w:"van",e:"🚐"},{l:"oo",w:"book",e:"📖"},{l:"OO",w:"moon",e:"🌙"}],
+  words:[
+    {w:"zebra",e:"🦓"},{w:"zip",e:"🤐"},{w:"web",e:"🕸️"},{w:"seven",e:"7️⃣"},
+    {w:"ring",e:"💍"},{w:"song",e:"🎵"},{w:"van",e:"🚐"},{w:"vest",e:"🦺"},
+    {w:"book",e:"📖"},{w:"moon",e:"🌙"}],
+  story:[
+    {t:"I see a zebra.",e:"🦓"},{t:"The van is red.",e:"🚐"},
+    {t:"I like the song.",e:"🎵"},{t:"The moon is big.",e:"🌙"} ] },
+];
+const SIGHT_WORDS=[
+  {w:"I",e:""},{w:"a",e:""},{w:"the",e:""},{w:"is",e:""},
+  {w:"see",e:"👀"},{w:"like",e:"❤️"},{w:"my",e:""},{w:"and",e:""},
+  {w:"in",e:""},{w:"on",e:""},
 ];
 const STEP_DEFS = [
   {id:"letters", icon:"🔤", label:"Sounds"},
@@ -178,6 +220,18 @@ const STEP_DEFS = [
   {id:"read", icon:"📖", label:"Read"},
   {id:"story", icon:"📚", label:"Story"},
 ];
+/* split a word into its sound units (digraphs stay together): rain -> [r,ai,n] */
+const GRAPHEMES = ["ai","oa","ie","ee","or","ng","oo"];
+function segWord(w){
+  const out=[], lw=w.toLowerCase(); let i=0;
+  while(i<w.length){
+    let m=null;
+    for(const g of GRAPHEMES){ if(lw.startsWith(g,i) && (!m||g.length>m.length)) m=g; }
+    if(m){ out.push(w.slice(i,i+m.length)); i+=m.length; }
+    else { out.push(w[i]); i++; }
+  }
+  return out;
+}
 const OWL_SAY = {
   letters:"Tap each card. Say the sound with me!",
   listen:"Listen… then tap the picture you hear.",
@@ -230,6 +284,8 @@ function renderHome(){
       <span><span class="nm">${L.name}</span><br><span class="ds">${L.desc}</span></span>
       <span class="st">${stars}</span></button>`;
   }).join("");
+  $("#sightgrid").innerHTML = SIGHT_WORDS.map(s=>
+    `<button class="sw" data-say="${s.w}">${s.e?`<span class="swe">${s.e}</span>`:""}<span class="sww">${s.w}</span></button>`).join("");
 }
 function openLevel(i){ cur=i; step="letters"; renderLevel(); show("s-level"); }
 function renderLevel(){
@@ -306,7 +362,7 @@ function stepBlend(){
     }
     const t=words[idx];
     body.innerHTML=`<div class="center" style="font-size:64px;margin:6px 0">${t.e}</div>
-      <div class="tiles" id="tiles">`+[...t.w].map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
+      <div class="tiles" id="tiles">`+segWord(t.w).map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
       <div class="center"><button class="btn" id="sayWord">🔊 ${t.w}</button></div>
       <div class="center note" style="margin-top:8px">Tap each letter left to right 👉</div>
       <div class="center note">${idx+1} / ${words.length}</div>`;
