@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>First English — from your first sound to your first story</title>
+<style>
+:root{
+  --cream:#fff8ee; --paper:#fffdf8; --ink:#33302a; --muted:#8a8474;
+  --coral:#ff6f61; --teal:#1f9e8e; --sun:#ffc93c; --sky:#7ec8e3; --lilac:#b388eb;
+  --radius:24px; --shadow:0 4px 18px rgba(51,48,42,.10);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{margin:0; background:var(--cream); color:var(--ink);
+  font-family:ui-rounded,"SF Pro Rounded","Hiragino Maru Gothic ProN",system-ui,-apple-system,"Segoe UI",sans-serif;
+  min-height:100vh; padding-bottom:40px;}
+header.hero{background:linear-gradient(160deg,#ff9a8b,#ff6f61 55%,#f8574a); color:#fff;
+  padding:26px 20px 30px; border-radius:0 0 34px 34px; text-align:center; box-shadow:var(--shadow);}
+header.hero h1{margin:0; font-size:30px; letter-spacing:.5px;}
+header.hero p{margin:6px 0 0; font-size:15px; opacity:.95;}
+main{max-width:720px; margin:0 auto; padding:18px 14px;}
+.screen{display:none;} .screen.on{display:block; animation:pop .3s ease;}
+@keyframes pop{from{opacity:0; transform:translateY(10px) scale(.99);} to{opacity:1; transform:none;}}
+.owlrow{display:flex; align-items:flex-end; gap:10px; margin:6px 2px 14px;}
+.owl{font-size:52px; flex:0 0 auto; filter:drop-shadow(0 3px 4px rgba(0,0,0,.15));}
+.bubble{background:#fff; border-radius:18px 18px 18px 4px; padding:12px 16px; font-size:18px; font-weight:700;
+  box-shadow:var(--shadow); position:relative; flex:1; display:flex; align-items:center; gap:10px;}
+.bubble .spk{flex:0 0 auto; border:0; background:var(--sun); width:46px; height:46px; border-radius:50%;
+  font-size:22px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.15);}
+.bubble .spk:active{transform:scale(.92);}
+.card{background:var(--paper); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; margin:0 0 16px;}
+.card h2{margin:0 0 4px; font-size:22px;}
+.lvlgrid{display:grid; grid-template-columns:1fr; gap:14px;}
+.lvl{display:flex; align-items:center; gap:16px; background:var(--paper); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:18px; cursor:pointer; border:3px solid transparent; text-align:left; width:100%; font:inherit;}
+.lvl:not(.lock):active{transform:scale(.98);}
+.lvl .em{font-size:44px; letter-spacing:2px;}
+.lvl .nm{font-size:20px; font-weight:800;}
+.lvl .ds{font-size:14px; color:var(--muted);}
+.lvl .st{margin-left:auto; font-size:22px; white-space:nowrap;}
+.lvl.lock{opacity:.55; cursor:not-allowed;}
+.lvl.l1{border-color:#ffd9d3;} .lvl.l2{border-color:#cdeee9;} .lvl.l3{border-color:#ffe9b8;}
+.steptabs{display:flex; gap:8px; margin:0 0 16px; overflow-x:auto; padding-bottom:4px;}
+.steptabs::-webkit-scrollbar{display:none;}
+.stab{flex:1 0 auto; border:0; border-radius:16px; padding:10px 14px; font:inherit; font-weight:800; font-size:15px;
+  background:#fff; color:var(--muted); cursor:pointer; box-shadow:var(--shadow); white-space:nowrap;}
+.stab.on{color:#fff;}
+.stab.on.s1{background:var(--coral);} .stab.on.s2{background:var(--teal);}
+.stab.on.s3{background:#e8a100;} .stab.on.s4{background:var(--lilac);}
+.lettergrid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+.lcard{background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:16px 8px; text-align:center; cursor:pointer; border:0; font:inherit;}
+.lcard:active{transform:scale(.95);}
+.lcard .L{font-size:52px; font-weight:900; color:var(--coral); line-height:1;}
+.lcard .E{font-size:44px; margin:6px 0 2px;}
+.lcard .W{font-size:16px; font-weight:700;}
+.lcard .spkmini{display:inline-block; margin-top:10px; border:0; background:var(--sun); border-radius:999px; padding:8px 14px; font-size:15px; font-weight:800; cursor:pointer;}
+.choices{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:6px;}
+.choice{background:#fff; border:4px solid transparent; border-radius:22px; box-shadow:var(--shadow);
+  font-size:56px; padding:22px 6px; cursor:pointer; transition:transform .12s;}
+.choice:active{transform:scale(.94);}
+.choice.right{border-color:var(--teal); background:#e6faf6; animation:joy .5s;}
+.choice.wrong{animation:wob .4s;}
+@keyframes joy{0%{transform:scale(1);}40%{transform:scale(1.12) rotate(-4deg);}100%{transform:scale(1);}}
+@keyframes wob{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+.bigword{background:#fff; border-radius:22px; box-shadow:var(--shadow); text-align:center;
+  padding:26px 12px; margin:6px 0 16px;}
+.bigword .w{font-size:52px; font-weight:900; letter-spacing:6px; color:var(--ink);}
+.bigword .spk{margin-top:12px; border:0; background:var(--sun); border-radius:999px; padding:12px 26px;
+  font-size:18px; font-weight:800; cursor:pointer;}
+.tiles{display:flex; gap:10px; justify-content:center; margin:4px 0 14px; flex-wrap:wrap;}
+.tile{width:64px; height:72px; border-radius:16px; background:var(--navy,#1b2f4b); color:#fff;
+  font-size:36px; font-weight:900; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  box-shadow:var(--shadow); border:0;}
+.tile.lit{background:var(--teal); transform:scale(1.08);}
+.story{background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:18px; margin:0 0 12px;
+  display:flex; align-items:center; gap:14px;}
+.story .se{font-size:48px;}
+.story .st2{font-size:20px; font-weight:700; flex:1;}
+.story .spk{border:0; background:var(--sun); width:52px; height:52px; border-radius:50%; font-size:24px; cursor:pointer; flex:0 0 auto;}
+.starscreen{text-align:center; padding:30px 10px;}
+.starscreen .big{font-size:76px; animation:joy .8s;}
+.starscreen h2{font-size:28px; margin:10px 0;}
+.btn{border:0; border-radius:18px; padding:16px 30px; font:inherit; font-size:19px; font-weight:800;
+  cursor:pointer; background:var(--teal); color:#fff; box-shadow:var(--shadow); margin:6px;}
+.btn.coral{background:var(--coral);} .btn.ghost{background:#fff; color:var(--ink);}
+.btn:active{transform:scale(.96);}
+.center{text-align:center;}
+.backrow{margin:0 0 12px;}
+.backbtn{border:0; background:#fff; border-radius:999px; padding:10px 18px; font:inherit; font-weight:800;
+  box-shadow:var(--shadow); cursor:pointer; font-size:15px; color:var(--muted);}
+.gate{position:fixed; top:14px; right:14px; z-index:60; border:0; background:rgba(255,255,255,.85);
+  border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:var(--shadow);}
+.sheet{position:fixed; inset:0; z-index:70; background:rgba(51,48,42,.5); display:none; align-items:flex-end; justify-content:center;}
+.sheet.on{display:flex;}
+.sheetin{background:var(--paper); border-radius:28px 28px 0 0; padding:24px 20px calc(30px + env(safe-area-inset-bottom));
+  width:100%; max-width:560px;}
+.sheetin h2{margin:0 0 10px;}
+.sheetin p{color:var(--muted); font-size:14.5px;}
+.sheetin .btn{width:100%; margin:8px 0;}
+.streak{display:inline-block; background:#fff; border-radius:999px; padding:8px 18px; font-weight:800; box-shadow:var(--shadow); margin-top:10px;}
+@media(min-width:640px){ .lvlgrid{grid-template-columns:1fr 1fr 1fr;} .lvl{flex-direction:column; text-align:center;} .lvl .st{margin:6px 0 0;} }
+</style>
+</head>
+<body>
+<button class="gate" id="gate" aria-label="Settings">⚙️</button>
+
+<!-- HOME: level map -->
+<div class="screen on" id="s-home">
+  <header class="hero"><h1>🌱 First English</h1><p>from your first sound to your first story</p></header>
+  <main>
+    <div class="owlrow"><div class="owl">🦉</div>
+      <div class="bubble"><button class="spk" data-say="Hello! I am Ollie. Tap a picture to start.">🔊</button>
+      <span id="owlHome">Hello! I'm Ollie 🦉 Tap a level to begin.</span></div></div>
+    <div class="lvlgrid" id="lvlgrid"></div>
+    <div class="center"><span class="streak" id="streak">🔥 0 day streak</span></div>
+  </main>
+</div>
+
+<!-- LEVEL: steps -->
+<div class="screen" id="s-level">
+  <main>
+    <div class="backrow"><button class="backbtn" id="backHome">← 🏠</button></div>
+    <div class="owlrow"><div class="owl">🦉</div>
+      <div class="bubble"><button class="spk" id="owlSpeak">🔊</button><span id="owlText"></span></div></div>
+    <div class="steptabs" id="steptabs"></div>
+    <div id="stepbody"></div>
+  </main>
+</div>
+
+<!-- parent gate sheet -->
+<div class="sheet" id="sheet"><div class="sheetin">
+  <h2>⚙️ Grown-ups</h2>
+  <p><b>How this works:</b> letters are taught in the order <i>s a t i p n …</i> (the Jolly Phonics sequence used in schools worldwide), because those six letters already make real words like <i>sat</i> and <i>pin</i>. Letter <b>sounds</b> come before letter names. Every word can be sounded out with letters already learned — no guessing.</p>
+  <p><b>Sound:</b> this app speaks with your device's voice (rate slowed for learners). For the pure letter sounds (ssss, not "ess"), please model them yourself — exaggerated and clipped, no added vowel ("mmm" not "muh").</p>
+  <p><b>Pace:</b> one level ≈ 5 minutes. Short daily sessions beat long ones. 🌟</p>
+  <button class="btn ghost" id="voiceTest">🔊 Test voice</button>
+  <button class="btn coral" id="resetProg">Reset all progress</button>
+  <button class="btn ghost" id="closeSheet">Close</button>
+</div></div>
+
+<script>
+"use strict";
+/* ================= DATA ================= */
+const LEVELS = [
+{ id:0, cls:"l1", emo:"🐍🍎🐯", name:"Level 1", desc:"6 sounds · first words",
+  letters:[
+    {l:"s",w:"snake",e:"🐍"},{l:"a",w:"apple",e:"🍎"},{l:"t",w:"tiger",e:"🐯"},
+    {l:"i",w:"igloo",e:"🧊"},{l:"p",w:"pig",e:"🐷"},{l:"n",w:"nest",e:"🪹"}],
+  words:[
+    {w:"ant",e:"🐜"},{w:"pin",e:"📌"},{w:"pan",e:"🍳"},{w:"tin",e:"🥫"},
+    {w:"tap",e:"🚰"},{w:"nap",e:"😴"},{w:"sit",e:"🪑"},{w:"pat",e:"👋"}],
+  story:[
+    {t:"I see an ant.",e:"🐜"},{t:"The ant sat.",e:"🐜"},{t:"I tap the tin.",e:"🥫"} ] },
+{ id:1, cls:"l2", emo:"🐱🪁🥚", name:"Level 2", desc:"7 more sounds · bigger words",
+  letters:[
+    {l:"c",w:"cat",e:"🐱"},{l:"k",w:"kite",e:"🪁"},{l:"e",w:"egg",e:"🥚"},
+    {l:"h",w:"hat",e:"🎩"},{l:"r",w:"rabbit",e:"🐰"},{l:"m",w:"moon",e:"🌙"},
+    {l:"d",w:"dog",e:"🐶"}],
+  words:[
+    {w:"cat",e:"🐱"},{w:"hat",e:"🎩"},{w:"map",e:"🗺️"},{w:"hen",e:"🐔"},
+    {w:"bed",e:"🛏️"},{w:"pen",e:"🖊️"},{w:"rat",e:"🐀"},{w:"ham",e:"🍖"}],
+  story:[
+    {t:"The cat sat on the mat.",e:"🐱"},{t:"I see a red hen.",e:"🐔"},{t:"The kid has a pen.",e:"🖊️"} ] },
+{ id:2, cls:"l3", emo:"🐐🐙☂️", name:"Level 3", desc:"6 more sounds · first stories",
+  letters:[
+    {l:"g",w:"goat",e:"🐐"},{l:"o",w:"octopus",e:"🐙"},{l:"u",w:"umbrella",e:"☂️"},
+    {l:"l",w:"lion",e:"🦁"},{l:"f",w:"fish",e:"🐟"},{l:"b",w:"ball",e:"⚽"}],
+  words:[
+    {w:"dog",e:"🐶"},{w:"sun",e:"☀️"},{w:"pig",e:"🐷"},{w:"cup",e:"☕"},
+    {w:"bus",e:"🚌"},{w:"log",e:"🪵"},{w:"bug",e:"🐛"},{w:"tub",e:"🛁"}],
+  story:[
+    {t:"The dog ran.",e:"🐶"},{t:"A big pig in the mud.",e:"🐷"},{t:"The sun is hot.",e:"☀️"},{t:"I see a bus.",e:"🚌"} ] },
+];
+const STEP_DEFS = [
+  {id:"letters", icon:"🔤", label:"Sounds"},
+  {id:"listen", icon:"👂", label:"Listen"},
+  {id:"blend", icon:"🧩", label:"Build"},
+  {id:"read", icon:"📖", label:"Read"},
+  {id:"story", icon:"📚", label:"Story"},
+];
+const OWL_SAY = {
+  letters:"Tap each card. Say the sound with me!",
+  listen:"Listen… then tap the picture you hear.",
+  blend:"Tap the letters, left to right. Then read the word!",
+  read:"Read the word… then tap the matching picture.",
+  story:"You can read a whole story now! Tap 🔊 to hear it.",
+};
+/* ================= STATE ================= */
+let prog = JSON.parse(localStorage.getItem("fe_prog")||'{"done":[],"stars":{}}');
+let streak = JSON.parse(localStorage.getItem("fe_streak")||'{"count":0,"last":""}');
+let cur = 0, step = "letters";
+const $ = s=>document.querySelector(s);
+function save(){ localStorage.setItem("fe_prog", JSON.stringify(prog)); }
+/* ================= SPEECH ================= */
+let voices=[];
+function loadV(){ try{ voices=speechSynthesis.getVoices(); }catch(e){} }
+if("speechSynthesis" in window){ loadV(); speechSynthesis.onvoiceschanged=loadV; }
+function say(text, slow){
+  if(!("speechSynthesis" in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang="en-US"; u.rate=slow===false?1:0.82; u.pitch=1.1;
+    const v=voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith("en"));
+    if(v) u.voice=v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+/* ================= SCREENS ================= */
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
+  $("#"+id).classList.add("on"); window.scrollTo({top:0});
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function bumpStreak(){
+  const t=todayStr();
+  if(streak.last!==t){
+    const y=new Date(); y.setDate(y.getDate()-1);
+    streak.count = (streak.last===y.toISOString().slice(0,10)) ? streak.count+1 : 1;
+    streak.last=t; localStorage.setItem("fe_streak",JSON.stringify(streak));
+  }
+}
+function renderHome(){
+  $("#streak").textContent = `🔥 ${streak.count} day streak`;
+  $("#lvlgrid").innerHTML = LEVELS.map((L,i)=>{
+    const locked = i>0 && !prog.done.includes(i-1);
+    const stars = prog.stars[i] ? "⭐".repeat(prog.stars[i]) : (locked?"🔒":"");
+    return `<button class="lvl ${L.cls}${locked?" lock":""}" data-lvl="${i}" ${locked?"disabled":""}>
+      <span class="em">${L.emo}</span>
+      <span><span class="nm">${L.name}</span><br><span class="ds">${L.desc}</span></span>
+      <span class="st">${stars}</span></button>`;
+  }).join("");
+}
+function openLevel(i){ cur=i; step="letters"; renderLevel(); show("s-level"); }
+function renderLevel(){
+  const L=LEVELS[cur];
+  $("#steptabs").innerHTML = STEP_DEFS.map(s=>
+    `<button class="stab ${step===s.id?"on "+({letters:"s1",listen:"s2",blend:"s3",read:"s4",story:"s4"}[s.id]):""}" data-step="${s.id}">${s.icon} ${s.label}</button>`).join("");
+  setOwl(OWL_SAY[step]);
+  ({letters:stepLetters,listen:stepListen,blend:stepBlend,read:stepRead,story:stepStory})[step]();
+}
+function setOwl(text){ $("#owlText").textContent=text; $("#owlSpeak").dataset.say=text; }
+function stepLetters(){
+  const L=LEVELS[cur];
+  $("#stepbody").innerHTML = `<div class="lettergrid">`+L.letters.map((c,i)=>
+    `<button class="lcard" data-li="${i}"><div class="L">${c.l}</div><div class="E">${c.e}</div><div class="W">${c.w}</div>
+     <span class="spkmini">🔊</span></button>`).join("")+`</div>
+     <div class="center" style="margin-top:14px"><button class="btn coral" id="nextStep">Next →</button></div>`;
+  $("#stepbody").querySelectorAll(".lcard").forEach(b=>b.onclick=()=>{
+    const c=L.letters[+b.dataset.li]; say(c.w);
+  });
+  $("#nextStep").onclick=()=>{ step="listen"; renderLevel(); };
+}
+function gameRound(kind){
+  // kind: 'listen' (hear word -> tap picture) or 'read' (see word -> tap picture)
+  const L=LEVELS[cur];
+  const words=[...L.words].sort(()=>Math.random()-.5).slice(0,6);
+  let idx=0, ok=0;
+  const body=$("#stepbody");
+  function round(){
+    if(idx>=words.length){ return finish(); }
+    const target=words[idx];
+    const opts=[target];
+    while(opts.length<3){ const c=L.words[Math.floor(Math.random()*L.words.length)];
+      if(!opts.includes(c)) opts.push(c); }
+    opts.sort(()=>Math.random()-.5);
+    body.innerHTML = (kind==="read"
+      ? `<div class="bigword"><div class="w">${target.w}</div><button class="spk" id="rwSay">🔊 hear it</button></div>`
+      : `<div class="bigword"><button class="spk" id="rwSay" style="font-size:26px">🔊 ${target.w}</button></div>`)
+      + `<div class="choices">`+opts.map(o=>`<button class="choice" data-w="${o.w}">${o.e}</button>`).join("")+`</div>
+      <div class="center note" style="margin-top:10px">${idx+1} / ${words.length}</div>`;
+    const play=()=>say(target.w);
+    $("#rwSay").onclick=play; setTimeout(play, 500);
+    body.querySelectorAll(".choice").forEach(ch=>ch.onclick=()=>{
+      if(ch.dataset.w===target.w){ ch.classList.add("right"); ok++; say("Yes! "+target.w,false); setTimeout(()=>{idx++;round();},900); }
+      else { ch.classList.add("wrong"); say("Try again"); setTimeout(()=>ch.classList.remove("wrong"),450); }
+    });
+  }
+  function finish(){
+    const stars = ok>=5?3:(ok>=4?2:1);
+    prog.stars[cur]=Math.max(prog.stars[cur]||0,stars);
+    if(!prog.done.includes(cur)) prog.done.push(cur);
+    save(); bumpStreak();
+    body.innerHTML=`<div class="card starscreen"><div class="big">${"⭐".repeat(stars)}</div>
+      <h2>${["","Great!","Wonderful!","Amazing!"][stars]}</h2>
+      <p style="color:var(--muted)">${ok} of ${words.length} correct</p>
+      <button class="btn coral" id="goNext">${kind==="listen"?"Next: Build 🧩":"Next: Story 📚"}</button>
+      <div><button class="btn ghost" id="goHome2">🏠 Levels</button></div></div>`;
+    say(["","Great!","Wonderful!","Amazing!"][stars]);
+    $("#goNext").onclick=()=>{ step = kind==="listen"?"blend":"story"; renderLevel(); };
+    $("#goHome2").onclick=()=>{ renderHome(); show("s-home"); };
+  }
+  round();
+}
+function stepListen(){ gameRound("listen"); }
+function stepRead(){ gameRound("read"); }
+function stepBlend(){
+  const L=LEVELS[cur];
+  const words=[...L.words].sort(()=>Math.random()-.5).slice(0,4);
+  let idx=0; const body=$("#stepbody");
+  function round(){
+    if(idx>=words.length){
+      body.innerHTML=`<div class="card starscreen"><div class="big">🧩</div><h2>You built ${words.length} words!</h2>
+        <button class="btn coral" id="goRead">Next: Read 📖</button></div>`;
+      $("#goRead").onclick=()=>{ step="read"; renderLevel(); }; return;
+    }
+    const t=words[idx];
+    body.innerHTML=`<div class="center" style="font-size:64px;margin:6px 0">${t.e}</div>
+      <div class="tiles" id="tiles">`+[...t.w].map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
+      <div class="center"><button class="btn" id="sayWord">🔊 ${t.w}</button></div>
+      <div class="center note" style="margin-top:8px">Tap each letter left to right 👉</div>
+      <div class="center note">${idx+1} / ${words.length}</div>`;
+    const tiles=[...body.querySelectorAll(".tile")];
+    const kw={}; L.letters.forEach(c=>kw[c.l]=c.w);
+    let tapped=0;
+    tiles.forEach(tb=>tb.onclick=()=>{
+      tb.classList.add("lit"); say(kw[tb.textContent]||tb.textContent);
+      tapped++;
+      if(tapped>=tiles.length){ setTimeout(()=>{ say(t.w); setTimeout(()=>{idx++;round();},1100); },700); }
+    });
+    $("#sayWord").onclick=()=>say(t.w);
+    setTimeout(()=>say(t.w),600);
+  }
+  round();
+}
+function stepStory(){
+  const L=LEVELS[cur];
+  $("#stepbody").innerHTML = L.story.map((s,i)=>
+    `<div class="story"><span class="se">${s.e}</span><span class="st2">${s.t}</span>
+     <button class="spk" data-si="${i}">🔊</button></div>`).join("")
+    + `<div class="center" style="margin-top:14px"><button class="btn coral" id="finishLvl">⭐ I did it!</button></div>`;
+  $("#stepbody").querySelectorAll(".spk").forEach(b=>b.onclick=()=>say(L.story[+b.dataset.si].t));
+  setTimeout(()=>say(L.story[0].t),700);
+  $("#finishLvl").onclick=()=>{
+    if(!prog.done.includes(cur)) prog.done.push(cur);
+    prog.stars[cur]=Math.max(prog.stars[cur]||0,3); save(); bumpStreak(); renderHome();
+    show("s-home"); say("Amazing! You read a story!");
+  };
+}
+/* ================= EVENTS ================= */
+document.addEventListener("click",e=>{
+  const sp=e.target.closest("[data-say]"); if(sp){ say(sp.dataset.say); return; }
+  const lv=e.target.closest("[data-lvl]"); if(lv&&!lv.disabled){ openLevel(+lv.dataset.lvl); return; }
+  const st=e.target.closest("[data-step]"); if(st){ step=st.dataset.step; renderLevel(); return; }
+});
+$("#backHome").onclick=()=>{ renderHome(); show("s-home"); };
+$("#owlSpeak").onclick=()=>say($("#owlText").textContent);
+/* parent gate: press & hold */
+let gateT=null;
+const gate=$("#gate");
+gate.addEventListener("pointerdown",()=>{ gateT=setTimeout(()=>$("#sheet").classList.add("on"),1200); });
+["pointerup","pointerleave","pointercancel"].forEach(ev=>gate.addEventListener(ev,()=>clearTimeout(gateT)));
+$("#closeSheet").onclick=()=>$("#sheet").classList.remove("on");
+$("#voiceTest").onclick=()=>say("Hello! The cat sat on the mat.");
+$("#resetProg").onclick=()=>{ if(confirm("Reset all progress?")){ prog={done:[],stars:{}}; save(); renderHome(); $("#sheet").classList.remove("on"); } };
+renderHome();
+</script>
+</body>
+</html>
