@@ -53,6 +53,8 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 .setpill{border:2px solid #ffd9a8; background:#fff; border-radius:999px; padding:6px 14px; font-size:14px; font-weight:700; color:#b06a2a; cursor:pointer;}
 .setpill.on{background:#ff9d5c; border-color:#ff9d5c; color:#fff;}
 .sightgrid{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
+.qzbtn.hint{animation:hintpulse 1s ease-in-out 3; border-color:#2e7d32;}
+@keyframes hintpulse{0%,100%{box-shadow:0 0 0 0 rgba(46,125,50,.0);}50%{box-shadow:0 0 0 6px rgba(46,125,50,.35);}}
 .sw{border:2px solid var(--sky); background:#fff; border-radius:16px; padding:10px 16px;
   font:inherit; cursor:pointer; display:flex; align-items:center; gap:8px;
   box-shadow:var(--shadow);}
@@ -157,7 +159,8 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
       <p class="note" style="margin:4px 0 0">Words to know by heart — tap to hear them.</p>
       <div class="setpills" id="setpills"></div>
       <div class="sightgrid" id="sightgrid"></div>
-      <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn">🎯 Quiz me</button></div>
+      <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn">🎯 Quiz me</button>
+        <span id="reviewWrap"></span></div>
     </div>
     <div class="center"><span class="streak" id="streak">🔥 0 day streak</span></div>
   </main>
@@ -446,17 +449,42 @@ let cur = 0, step = "letters";
 const $ = s=>document.querySelector(s);
 function save(){ localStorage.setItem("fe_prog", JSON.stringify(prog)); }
 /* ================= SPEECH ================= */
-let voices=[];
-function loadV(){ try{ voices=speechSynthesis.getVoices(); }catch(e){} }
+let voices=[], bestVoice=null;
+function pickVoice(){
+  const en=voices.filter(v=>v.lang&&v.lang.toLowerCase().startsWith("en"));
+  if(!en.length){ bestVoice=null; return; }
+  const score=v=>{ const n=(v.name||"").toLowerCase(); let sc=0;
+    if((v.lang||"").toLowerCase()==="en-us") sc+=10;
+    if(n.includes("google us english")) sc+=50;
+    if(n.includes("microsoft")&&(n.includes("natural")||n.includes("aria")||n.includes("jenny")||n.includes("guy"))) sc+=45;
+    if(n.includes("samantha")||n.includes("siri")) sc+=40;
+    if(n.includes("samsung")) sc+=20;
+    if(n.includes("natural")||n.includes("neural")) sc+=25;
+    if(v.default) sc+=5; return sc; };
+  bestVoice=en.slice().sort((a,b)=>score(b)-score(a))[0]||null;
+}
+function loadV(){ try{ voices=speechSynthesis.getVoices(); pickVoice(); }catch(e){} }
 if("speechSynthesis" in window){ loadV(); speechSynthesis.onvoiceschanged=loadV; }
+/* Baked natural-voice audio: tools/bake_audio.py generates audio/*.mp3 + audio/manifest.json.
+   When present, the app plays them instead of speech synthesis. */
+const FE_AUDIO={manifest:null};
+fetch("audio/manifest.json").then(r=>r.ok?r.json():null).then(m=>{ FE_AUDIO.manifest=m; }).catch(()=>{});
+let curAudio=null;
+function slugify(w){ return w.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }
+function stopSay(){ try{ speechSynthesis.cancel(); }catch(e){} if(curAudio){ try{curAudio.pause();}catch(e){} curAudio=null; } }
+function playBaked(text){
+  const m=FE_AUDIO.manifest; if(!m) return false;
+  const f=m[slugify(text)]; if(!f) return false;
+  try{ stopSay(); curAudio=new Audio("audio/"+f); curAudio.play().catch(()=>{}); return true; }catch(e){ return false; }
+}
 function say(text, slow){
+  if(playBaked(text)) return;
   if(!("speechSynthesis" in window)) return;
   try{
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(text);
-    u.lang="en-US"; u.rate=slow===false?1:0.82; u.pitch=1.1;
-    const v=voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith("en"));
-    if(v) u.voice=v;
+    u.lang="en-US"; u.rate=slow===false?0.95:0.85; u.pitch=1.05;
+    if(bestVoice) u.voice=bestVoice;
     speechSynthesis.speak(u);
   }catch(e){}
 }
@@ -490,6 +518,9 @@ function renderHome(){
   const vis = sightSet===0 ? SIGHT_WORDS : SIGHT_WORDS.filter(s=>s.set===sightSet);
   $("#sightgrid").innerHTML = vis.map(s=>
     `<button class="sw" data-say="${s.w}">${s.e?`<span class="swe">${s.e}</span>`:""}<span class="sww">${s.w}</span></button>`).join("");
+  const due=srsDue();
+  $("#reviewWrap").innerHTML = due.length?` <button class="btn ghost" id="reviewBtn">🔁 Review ${due.length}</button>`:"";
+  const rb=$("#reviewBtn"); if(rb) rb.onclick=()=>startQuiz(due.slice(0,10),"sight-review");
 }
 function openLevel(i){ cur=i; step="letters"; renderLevel(); show("s-level"); }
 function renderLevel(){
@@ -605,6 +636,20 @@ function stepStory(){
   $("#gradOk").onclick=()=>$("#grad").classList.remove("on");
   $("#lvlQuiz").onclick=()=>startQuiz(LEVELS[cur].words,"level");
 }
+/* ================= SPACED REPETITION (sight words) ================= */
+const SRS_STEPS=[1,4,10,30];
+function loadSRS(){ try{ return JSON.parse(localStorage.getItem("fe_srs")||"{}"); }catch(e){ return {}; } }
+function saveSRS(o){ try{ localStorage.setItem("fe_srs", JSON.stringify(o)); }catch(e){} }
+function srsRecord(word, okFirst){
+  const s=loadSRS(), r=s[word]||{streak:0,iv:1,due:0};
+  if(okFirst){ r.streak++; r.iv=SRS_STEPS[Math.min(r.streak-1,SRS_STEPS.length-1)]; }
+  else { r.streak=0; r.iv=1; }
+  r.due=Date.now()+r.iv*864e5; s[word]=r; saveSRS(s);
+}
+function srsDue(){
+  const s=loadSRS(), now=Date.now();
+  return SIGHT_WORDS.filter(w=>{ const r=s[w.w]; return r&&r.due<=now; });
+}
 /* ================= LISTENING QUIZ ================= */
 let qz=null;
 function startQuiz(bank,kind){
@@ -612,7 +657,7 @@ function startQuiz(bank,kind){
   renderQuizQ(); show("s-quiz");
 }
 function renderQuizQ(){
-  const target=qz.pool[qz.idx]; qz.target=target;
+  const target=qz.pool[qz.idx]; qz.target=target; qz.wrongStreak=0;
   const others=[...qz.bank].filter(x=>x.w!==target.w).sort(()=>Math.random()-.5).slice(0,3);
   const opts=[target,...others].sort(()=>Math.random()-.5);
   $("#qzOwl").textContent="Tap the word you hear! 👂";
@@ -628,11 +673,17 @@ function quizPick(i,opts,target,btn){
   if(btn.classList.contains("right")||!qz) return;
   if(opts[i].w===target.w){
     btn.classList.add("right");
+    if(qz.kind.indexOf("sight")===0) srsRecord(target.w, qz.firstTry);
     if(qz.firstTry){ qz.stars++; }
     say("Yes! "+target.w+".");
     setTimeout(()=>{ if(!qz) return; qz.idx++; qz.firstTry=true; qz.idx>=qz.pool.length?renderQuizDone():renderQuizQ(); },1200);
   }else{
-    btn.classList.add("wrong"); qz.firstTry=false; say("Try again!");
+    btn.classList.add("wrong"); qz.firstTry=false; qz.wrongStreak=(qz.wrongStreak||0)+1;
+    if(qz.wrongStreak>=2){
+      say("Listen: "+target.w+". "+target.w+".");
+      const cb=[...document.querySelectorAll("[data-qz]")].find((b,j)=>opts[j].w===target.w);
+      if(cb) cb.classList.add("hint");
+    } else say("Try again!");
     setTimeout(()=>btn.classList.remove("wrong"),900);
   }
 }
@@ -671,7 +722,7 @@ function renderParentProg(){
   }).join("");
   const grad = localStorage.getItem("fe_grad") ? `<div class="pgrad">🎓 All 9 levels complete!</div>` : "";
   $("#parentProg").innerHTML = `<div class="pgrid">${rows}</div>${grad}
-    <div class="pfoot">🔥 ${streak.count} day streak · 📝 ${SIGHT_WORDS.length} sight words to practice</div>`;
+    <div class="pfoot">🔥 ${streak.count} day streak · 📝 ${SIGHT_WORDS.length} sight words · 🔁 ${srsDue().length} due for review</div>`;
 }
 ["pointerup","pointerleave","pointercancel"].forEach(ev=>gate.addEventListener(ev,()=>clearTimeout(gateT)));
 $("#closeSheet").onclick=()=>$("#sheet").classList.remove("on");
