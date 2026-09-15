@@ -658,7 +658,7 @@ function stepStory(){
     }
   };
   $("#gradOk").onclick=()=>$("#grad").classList.remove("on");
-  $("#lvlQuiz").onclick=()=>startQuiz(LEVELS[cur].words,"level");
+  $("#lvlQuiz").onclick=()=>startQuiz(adaptivePool(LEVELS[cur].words,"level"),"level");
   $("#talkBtn").onclick=()=>startTalk();
 }
 /* ================= MINIMAL PAIRS (listening discrimination) ================= */
@@ -682,17 +682,58 @@ function startPairs(){
   const pairs=[...MIN_PAIRS].sort(()=>Math.random()-.5).slice(0,6);
   const bank=[], pairOf={};
   pairs.forEach(p=>{ bank.push(p.a,p.b); pairOf[p.a.w]=p.b.w; pairOf[p.b.w]=p.a.w; });
-  startQuiz(bank,"pairs",pairOf);
+  startQuiz(adaptivePool(bank,"pairs"),"pairs",pairOf);
 }
 /* ================= SPACED REPETITION (sight words) ================= */
 const SRS_STEPS=[1,4,10,30];
 function loadSRS(){ try{ return JSON.parse(localStorage.getItem("fe_srs")||"{}"); }catch(e){ return {}; } }
 function saveSRS(o){ try{ localStorage.setItem("fe_srs", JSON.stringify(o)); }catch(e){} }
 function srsRecord(word, okFirst){
-  const s=loadSRS(), r=s[word]||{streak:0,iv:1,due:0};
-  if(okFirst){ r.streak++; r.iv=SRS_STEPS[Math.min(r.streak-1,SRS_STEPS.length-1)]; }
-  else { r.streak=0; r.iv=1; }
-  r.due=Date.now()+r.iv*864e5; s[word]=r; saveSRS(s);
+  const s=loadSRS(), r=s[word]||{streak:0,iv:1,due:0}, now=Date.now();
+  if(r.lastSeen && now-r.lastSeen>14*864e5){ r.h=[]; r.consecErr=0; } /* old failures decay */
+  if(okFirst){ r.streak++; r.iv=SRS_STEPS[Math.min(r.streak-1,SRS_STEPS.length-1)]; r.consecErr=0; }
+  else { r.streak=0; r.iv=1; r.consecErr=(r.consecErr||0)+1; }
+  r.h=(r.h||[]); r.h.push(okFirst?1:0); if(r.h.length>5) r.h=r.h.slice(-5);
+  r.lastSeen=now; r.due=now+r.iv*864e5; s[word]=r; saveSRS(s);
+}
+function masteryOf(word){ /* null until 3 attempts, else fraction correct over last 5 */
+  const r=loadSRS()[word]; if(!r||!r.h||r.h.length<3) return null;
+  return r.h.reduce((a,b)=>a+b,0)/r.h.length;
+}
+function srsDueFor(bank){
+  const s=loadSRS(), now=Date.now();
+  return bank.filter(w=>{ const r=s[w.w]; return r&&r.due<=now; });
+}
+function adaptGet(){ try{ return JSON.parse(localStorage.getItem("fe_adapt")||"{}"); }catch(e){ return {}; } }
+function adaptSet(o){ try{ localStorage.setItem("fe_adapt",JSON.stringify(o)); }catch(e){} }
+function challengeFor(bank,kind){ /* one step harder, not yet mastered */
+  const s=loadSRS();
+  const fresh=w=>{ const r=s[w.w]; return !r||!r.h||r.h.length<3||(r.h.reduce((a,b)=>a+b,0)/r.h.length)<0.8; };
+  if(kind==="sight"){ const mx=Math.max(0,...bank.map(w=>w.set||0));
+    return SIGHT_WORDS.filter(w=>w.set===mx+1&&fresh(w)); }
+  if(kind==="level"){ const L=LEVELS[cur+1]; return L?(L.words||[]).filter(fresh):[]; }
+  return [];
+}
+function adaptivePool(bank,kind){
+  /* research-backed mix: ~70% due review, ~20% new, ~10% challenge;
+     next-round difficulty from last round's mistakes: 0->harder, 1->same, 2+->easier */
+  if(!bank||!bank.length) return [];
+  const sh=a=>[...a].sort(()=>Math.random()-.5);
+  const s=loadSRS(), now=Date.now();
+  const due=bank.filter(w=>{ const r=s[w.w]; return r&&r.due<=now; });
+  const learning=bank.filter(w=>{ const r=s[w.w]; return !r||!r.h||r.h.length<3; });
+  const rest=bank.filter(w=>due.indexOf(w)<0&&learning.indexOf(w)<0);
+  const ag=adaptGet(), lastMiss=(ag[kind]===undefined?1:ag[kind]);
+  let nDue=4,nLearn=1,nChal=1;
+  if(lastMiss>=2){ nDue=2; nLearn=3; nChal=0; }
+  else if(lastMiss===0){ nDue=3; nLearn=1; nChal=2; }
+  const pool=[...sh(due).slice(0,nDue),...sh(learning).slice(0,nLearn)];
+  if(nChal>0) pool.push(...sh(challengeFor(bank,kind)).slice(0,nChal));
+  for(const src of [rest,learning,due,bank]){
+    for(const w of sh(src)){ if(pool.length>=6) break; if(pool.indexOf(w)<0) pool.push(w); }
+    if(pool.length>=6) break;
+  }
+  return pool.slice(0,6);
 }
 function srsDue(){
   const s=loadSRS(), now=Date.now();
@@ -727,8 +768,8 @@ function quizPick(i,opts,target,btn){
   if(btn.classList.contains("right")||!qz) return;
   if(opts[i].w===target.w){
     btn.classList.add("right");
-    if(qz.kind.indexOf("sight")===0) srsRecord(target.w, qz.firstTry);
-    if(qz.firstTry){ qz.stars++; }
+    if(qz.kind==="sight"||qz.kind==="pairs"||qz.kind==="level") srsRecord(target.w, qz.firstTry);
+    if(qz.firstTry){ qz.stars++; } else { qz.miss=(qz.miss||0)+1; }
     say("Yes! "+target.w+".");
     setTimeout(()=>{ if(!qz) return; qz.idx++; qz.firstTry=true; qz.idx>=qz.pool.length?renderQuizDone():renderQuizQ(); },1200);
   }else{
@@ -743,8 +784,12 @@ function quizPick(i,opts,target,btn){
 }
 function renderQuizDone(){
   const qzDone=qz; qz=null;
+  if(qzDone.kind==="sight"||qzDone.kind==="pairs"||qzDone.kind==="level"){
+    const a=adaptGet(); a[qzDone.kind]=qzDone.miss||0; adaptSet(a);
+  }
   $("#qzBody").innerHTML=`<div class="qzdone"><div class="big">${qzDone.stars>=4?"🎉":"💪"}</div>
     <h2>You earned ${qzDone.stars} star${qzDone.stars===1?"":"s"}! ⭐</h2>
+    ${["sight","pairs","level"].indexOf(qzDone.kind)>=0?'<p class="note">🧠 Smart practice: next round adjusts to you!</p>':""}
     <button class="btn coral" id="qzAgain">🎯 Play again</button>
     <div style="margin-top:10px"><button class="btn ghost" id="qzHome">← 🏠</button></div></div>`;
   const starWord = qzDone.kind==="sight" ? "sight word star" : (qzDone.kind==="pairs" ? "listening star" : "word star");
@@ -968,7 +1013,8 @@ document.addEventListener("click",e=>{
   const st=e.target.closest("[data-step]"); if(st){ step=st.dataset.step; renderLevel(); return; }
 });
 $("#backHome").onclick=()=>{ renderHome(); show("s-home"); };
-$("#quizBtn").onclick=()=>startQuiz(sightSet===0?SIGHT_WORDS:SIGHT_WORDS.filter(s=>s.set===sightSet),"sight");
+$("#quizBtn").onclick=()=>{ const b=sightSet===0?SIGHT_WORDS:SIGHT_WORDS.filter(s=>s.set===sightSet);
+  startQuiz(adaptivePool(b,"sight"),"sight"); };
 $("#pairsBtn").onclick=()=>startPairs();
 if(!SR){ const sb=$("#speakBtn"); if(sb){ sb.disabled=true; sb.style.opacity=.5; } $("#speakNote").textContent="Voice input needs Chrome or Edge."; }
 else $("#speakBtn").onclick=()=>startSpeak();
