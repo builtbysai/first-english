@@ -49,6 +49,9 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 .lvl.l4{border-color:#d9c8ff;} .lvl.l5{border-color:#bfe3ff;} .lvl.l6{border-color:#ffc4d6;} .lvl.l7{border-color:#c4f0ff;}
 .l8{border-color:#c9f2d8;} .l9{border-color:#ead9f0;}
 .sightcard h2{margin:0 0 4px;}
+.setpills{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+.setpill{border:2px solid #ffd9a8; background:#fff; border-radius:999px; padding:6px 14px; font-size:14px; font-weight:700; color:#b06a2a; cursor:pointer;}
+.setpill.on{background:#ff9d5c; border-color:#ff9d5c; color:#fff;}
 .sightgrid{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
 .sw{border:2px solid var(--sky); background:#fff; border-radius:16px; padding:10px 16px;
   font:inherit; cursor:pointer; display:flex; align-items:center; gap:8px;
@@ -152,6 +155,7 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
     <div class="lvlgrid" id="lvlgrid"></div>
     <div class="card sightcard"><h2>👁️ Sight words</h2>
       <p class="note" style="margin:4px 0 0">Words to know by heart — tap to hear them.</p>
+      <div class="setpills" id="setpills"></div>
       <div class="sightgrid" id="sightgrid"></div>
       <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn">🎯 Quiz me</button></div>
     </div>
@@ -330,16 +334,84 @@ const LEVELS = [
   story:[
     {t:"The duck is in the mud.",e:"🦆"},{t:"Pick up the sock.",e:"👆"},{t:"The bell is on the hill.",e:"🔔"},{t:"Kiss the pig.",e:"💋"}] }
 ];
+let sightSet=0;
 const SIGHT_WORDS=[
-  {w:"I",e:""},{w:"a",e:""},{w:"the",e:""},{w:"is",e:""},
-  {w:"see",e:"👀"},{w:"like",e:"❤️"},{w:"my",e:""},{w:"and",e:""},
-  {w:"in",e:""},{w:"on",e:""},
-  {w:"you",e:""},{w:"said",e:""},{w:"was",e:""},{w:"are",e:""},{w:"they",e:""},
-  {w:"he",e:""},{w:"she",e:""},{w:"we",e:""},{w:"no",e:"🚫"},{w:"go",e:""},
-  {w:"this",e:"👉"},{w:"that",e:"👈"},{w:"with",e:"🤝"},{w:"have",e:"🖐️"},{w:"look",e:"👀"},
-  {w:"me",e:"😊"},{w:"play",e:"⚽"},{w:"for",e:"🎁"},{w:"it",e:"✨"},{w:"can",e:"🥫"},
-  {w:"red",e:"🔴"},{w:"run",e:"🏃"},{w:"jump",e:"🦘"},{w:"big",e:"🐘"},{w:"day",e:"☀️"},
-  {w:"get",e:"📦"},{w:"has",e:"✊"},{w:"him",e:"👦"},{w:"how",e:"❓"},{w:"of",e:""},
+  {w:"I",e:"",set:1},
+  {w:"a",e:"",set:1},
+  {w:"the",e:"",set:1},
+  {w:"is",e:"",set:1},
+  {w:"see",e:"👀",set:1},
+  {w:"like",e:"❤️",set:1},
+  {w:"my",e:"",set:1},
+  {w:"and",e:"",set:1},
+  {w:"in",e:"",set:1},
+  {w:"on",e:"",set:1},
+  {w:"you",e:"",set:2},
+  {w:"said",e:"",set:2},
+  {w:"was",e:"",set:2},
+  {w:"are",e:"",set:2},
+  {w:"they",e:"",set:2},
+  {w:"he",e:"",set:2},
+  {w:"she",e:"",set:2},
+  {w:"we",e:"",set:2},
+  {w:"no",e:"🚫",set:2},
+  {w:"go",e:"",set:2},
+  {w:"this",e:"👉",set:3},
+  {w:"that",e:"👈",set:3},
+  {w:"with",e:"🤝",set:3},
+  {w:"have",e:"🖐️",set:3},
+  {w:"look",e:"👀",set:3},
+  {w:"me",e:"😊",set:3},
+  {w:"play",e:"⚽",set:3},
+  {w:"for",e:"🎁",set:3},
+  {w:"it",e:"✨",set:3},
+  {w:"can",e:"🥫",set:3},
+  {w:"red",e:"🔴",set:4},
+  {w:"run",e:"🏃",set:4},
+  {w:"jump",e:"🦘",set:4},
+  {w:"big",e:"🐘",set:4},
+  {w:"day",e:"☀️",set:4},
+  {w:"get",e:"📦",set:4},
+  {w:"has",e:"✊",set:4},
+  {w:"him",e:"👦",set:4},
+  {w:"how",e:"❓",set:4},
+  {w:"of",e:"",set:4},
+  {w:"at",e:"",set:5},
+  {w:"away",e:"👋",set:5},
+  {w:"black",e:"⬛",set:5},
+  {w:"brown",e:"🟤",set:5},
+  {w:"but",e:"",set:5},
+  {w:"came",e:"",set:5},
+  {w:"did",e:"",set:5},
+  {w:"do",e:"",set:5},
+  {w:"eat",e:"🍽️",set:5},
+  {w:"four",e:"4️⃣",set:6},
+  {w:"good",e:"👍",set:6},
+  {w:"into",e:"",set:6},
+  {w:"must",e:"",set:6},
+  {w:"new",e:"✨",set:6},
+  {w:"now",e:"⏰",set:6},
+  {w:"our",e:"",set:6},
+  {w:"out",e:"🚪",set:6},
+  {w:"please",e:"🙏",set:6},
+  {w:"pretty",e:"🌸",set:7},
+  {w:"ran",e:"🏃",set:7},
+  {w:"ride",e:"🚗",set:7},
+  {w:"saw",e:"👀",set:7},
+  {w:"say",e:"🗣️",set:7},
+  {w:"so",e:"",set:7},
+  {w:"soon",e:"⏳",set:7},
+  {w:"there",e:"",set:7},
+  {w:"too",e:"",set:7},
+  {w:"under",e:"⬇️",set:8},
+  {w:"want",e:"🤲",set:8},
+  {w:"well",e:"",set:8},
+  {w:"went",e:"🚶",set:8},
+  {w:"what",e:"❓",set:8},
+  {w:"white",e:"⬜",set:8},
+  {w:"who",e:"👤",set:8},
+  {w:"will",e:"",set:8},
+  {w:"yes",e:"✅",set:8},
 ];
 const STEP_DEFS = [
   {id:"letters", icon:"🔤", label:"Sounds"},
@@ -412,7 +484,11 @@ function renderHome(){
       <span><span class="nm">${L.name}</span><br><span class="ds">${L.desc}</span></span>
       <span class="st">${stars}</span></button>`;
   }).join("");
-  $("#sightgrid").innerHTML = SIGHT_WORDS.map(s=>
+  const sets=[...new Set(SIGHT_WORDS.map(s=>s.set))].sort((a,b)=>a-b);
+  $("#setpills").innerHTML = [`<button class="setpill${sightSet===0?" on":""}" data-set="0">All</button>`,
+    ...sets.map(n=>`<button class="setpill${sightSet===n?" on":""}" data-set="${n}">Set ${n}</button>`)].join("");
+  const vis = sightSet===0 ? SIGHT_WORDS : SIGHT_WORDS.filter(s=>s.set===sightSet);
+  $("#sightgrid").innerHTML = vis.map(s=>
     `<button class="sw" data-say="${s.w}">${s.e?`<span class="swe">${s.e}</span>`:""}<span class="sww">${s.w}</span></button>`).join("");
 }
 function openLevel(i){ cur=i; step="letters"; renderLevel(); show("s-level"); }
@@ -574,11 +650,12 @@ function renderQuizDone(){
 /* ================= EVENTS ================= */
 document.addEventListener("click",e=>{
   const sp=e.target.closest("[data-say]"); if(sp){ say(sp.dataset.say); return; }
+  const stp=e.target.closest("[data-set]"); if(stp){ sightSet=+stp.dataset.set; renderHome(); return; }
   const lv=e.target.closest("[data-lvl]"); if(lv&&!lv.disabled){ openLevel(+lv.dataset.lvl); return; }
   const st=e.target.closest("[data-step]"); if(st){ step=st.dataset.step; renderLevel(); return; }
 });
 $("#backHome").onclick=()=>{ renderHome(); show("s-home"); };
-$("#quizBtn").onclick=()=>startQuiz(SIGHT_WORDS,"sight");
+$("#quizBtn").onclick=()=>startQuiz(sightSet===0?SIGHT_WORDS:SIGHT_WORDS.filter(s=>s.set===sightSet),"sight");
 $("#qzBack").onclick=()=>{ qz=null; renderHome(); show("s-home"); };
 $("#qzSpeak").onclick=()=>{ if(qz&&qz.target) say("Find: "+qz.target.w); };
 $("#owlSpeak").onclick=()=>say($("#owlText").textContent);
