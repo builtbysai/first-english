@@ -54,6 +54,10 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 .setpill.on{background:#ff9d5c; border-color:#ff9d5c; color:#fff;}
 .sightgrid{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
 .qzbtn.hint{animation:hintpulse 1s ease-in-out 3; border-color:#2e7d32;}
+.micbtn{width:96px;height:96px;border-radius:50%;border:none;font-size:44px;background:#fff;box-shadow:var(--shadow);cursor:pointer;}
+.micbtn.live{background:#ff6f61;animation:hintpulse 1.2s ease-in-out infinite;}
+.spkheard{min-height:28px;color:var(--muted);font-style:italic;margin-top:8px;}
+.spkword{font-size:40px;font-weight:800;margin:6px 0;}
 @keyframes hintpulse{0%,100%{box-shadow:0 0 0 0 rgba(46,125,50,.0);}50%{box-shadow:0 0 0 6px rgba(46,125,50,.35);}}
 .sw{border:2px solid var(--sky); background:#fff; border-radius:16px; padding:10px 16px;
   font:inherit; cursor:pointer; display:flex; align-items:center; gap:8px;
@@ -162,6 +166,11 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
       <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn">🎯 Quiz me</button>
         <span id="reviewWrap"></span></div>
     </div>
+    <div class="card"><h2>🎙️ Say it</h2>
+      <p class="note" style="margin:4px 0 0">Say words and sentences out loud!</p>
+      <div class="center" style="margin-top:12px"><button class="btn coral" id="speakBtn">🎙️ Say it out loud</button></div>
+      <div class="center"><span class="note" id="speakNote"></span></div>
+    </div>
     <div class="card"><h2>👂 Sound pairs</h2>
       <p class="note" style="margin:4px 0 0">Hear the tiny difference — <i>ship</i> or <i>sheep</i>?</p>
       <div class="center" style="margin-top:12px"><button class="btn coral" id="pairsBtn">👂 Play sound pairs</button></div>
@@ -177,6 +186,16 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
     <div class="owlrow"><div class="owl">🦉</div>
       <div class="bubble"><button class="spk" id="qzSpeak">🔊</button><span id="qzOwl"></span></div></div>
     <div id="qzBody"></div>
+  </main>
+</div>
+
+<!-- SPEAK: say it out loud -->
+<div class="screen" id="s-speak">
+  <main>
+    <div class="backrow"><button class="backbtn" id="spkBack">← 🏠</button></div>
+    <div class="owlrow"><div class="owl">🦉</div>
+      <div class="bubble"><button class="spk" id="spkSpeak">🔊</button><span id="spkOwl">Say it out loud! 🎙️</span></div></div>
+    <div id="spkBody"></div>
   </main>
 </div>
 
@@ -731,6 +750,105 @@ function renderQuizDone(){
   $("#qzAgain").onclick=()=>startQuiz(qzDone.bank,qzDone.kind);
   $("#qzHome").onclick=()=>{ renderHome(); show("s-home"); };
 }
+/* ================= SPEAK (speech production) ================= */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const SPEAK_SENTENCES=[
+ {t:"I see a cat.",k:"cat",e:"🐱"},
+ {t:"I see a dog.",k:"dog",e:"🐶"},
+ {t:"I like the sun.",k:"sun",e:"☀️"},
+ {t:"I see a fish.",k:"fish",e:"🐟"},
+ {t:"I see a ship.",k:"ship",e:"🚢"},
+ {t:"I like sheep.",k:"sheep",e:"🐑"},
+ {t:"I see a box.",k:"box",e:"📦"},
+ {t:"I see a fox.",k:"fox",e:"🦊"},
+ {t:"The soup is hot.",k:"hot",e:"🔥"},
+ {t:"I see a red bed.",k:"bed",e:"🛏️"},
+];
+let spk=null;
+function speakGrade(heard,target,mode){
+  const norm=(heard||"").toLowerCase().replace(/[^a-z ]/g," ").replace(/\s+/g," ").trim();
+  if(!norm) return false;
+  const key = mode==="words" ? (target.word||target.w) : target.k;
+  return norm.split(" ").includes(key);
+}
+function startSpeak(){
+  const seen={}, words=[];
+  SIGHT_WORDS.concat(...MIN_PAIRS.map(p=>[p.a,p.b])).forEach(x=>{ if(x.e&&!seen[x.w]){ seen[x.w]=1; words.push(x); } });
+  const wpool=[...words].sort(()=>Math.random()-.5).slice(0,3).map(x=>({t:x.w,k:x.w,e:x.e,word:x.w}));
+  const spool=[...SPEAK_SENTENCES].sort(()=>Math.random()-.5).slice(0,3);
+  spk={pool:[...wpool,...spool].sort(()=>Math.random()-.5),idx:0,stars:0,firstTry:true,target:null,rec:null,listening:false};
+  $("#spkOwl").textContent="Say it out loud! 🎙️";
+  renderSpeakQ(); show("s-speak");
+}
+function renderSpeakQ(){
+  stopSpeakRec();
+  const target=spk.pool[spk.idx]; spk.target=target; spk.firstTry=true;
+  const label = target.word ? target.word : target.t;
+  $("#spkBody").innerHTML=`<div class="card starscreen">
+    <div class="center note">${spk.idx+1} of ${spk.pool.length} &nbsp;<span style="font-size:20px">${"⭐".repeat(spk.stars)}</span></div>
+    <div style="font-size:64px">${target.e}</div>
+    <div class="spkword">${label}</div>
+    <div class="center"><button class="btn ghost" id="spkHear">🔊 Hear it</button></div>
+    <div class="center" style="margin-top:10px"><button class="micbtn" id="spkMic">🎙️</button></div>
+    <div class="center note">Tap the mic and say it!</div>
+    <div class="center spkheard" id="spkHeard"></div>
+    <div class="center" id="spkFb" style="min-height:26px;font-weight:700"></div></div>`;
+  $("#spkHear").onclick=()=>say(label);
+  $("#spkMic").onclick=()=>speakListen();
+  setTimeout(()=>{ if(spk&&spk.target===target) say("Say: "+label); },400);
+}
+function stopSpeakRec(){ if(spk&&spk.rec){ try{spk.rec.abort();}catch(e){} spk.rec=null; } if(spk) spk.listening=false; const m=$("#spkMic"); if(m) m.classList.remove("live"); }
+function speakListen(){
+  if(!SR||!spk||spk.listening) return;
+  let rec; try{ rec=new SR(); }catch(e){ $("#spkFb").textContent="Voice input is not available."; return; }
+  spk.rec=rec; spk.listening=true;
+  const mic=$("#spkMic"); if(mic) mic.classList.add("live");
+  $("#spkFb").textContent="Listening… 👂"; $("#spkHeard").textContent="";
+  rec.lang="en-US"; rec.interimResults=true; rec.maxAlternatives=1;
+  rec.onresult=(ev)=>{
+    let interim="",final="";
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      if(ev.results[i].isFinal) final+=ev.results[i][0].transcript;
+      else interim+=ev.results[i][0].transcript;
+    }
+    if(interim) $("#spkHeard").textContent="\u201C"+interim+"…\u201D";
+    if(final) speakHeard(final);
+  };
+  rec.onerror=(ev)=>{
+    stopSpeakRec();
+    $("#spkFb").textContent = ev.error==="not-allowed" ? "Microphone is blocked — allow it to play! 🎙️"
+      : ev.error==="network" ? "I could not hear you — check internet and try again."
+      : "I did not catch that — try again!";
+  };
+  rec.onend=()=>{ if(spk) { spk.listening=false; const m=$("#spkMic"); if(m) m.classList.remove("live"); } };
+  try{ rec.start(); }catch(e){ stopSpeakRec(); }
+}
+function speakHeard(heard){
+  stopSpeakRec();
+  const target=spk.target, mode=target.word?"words":"sentences";
+  $("#spkHeard").textContent="\u201C"+heard+"\u201D";
+  if(speakGrade(heard,target,mode)){
+    if(spk.firstTry) spk.stars++;
+    $("#spkFb").textContent="Yes! ⭐";
+    say("Yes! "+(target.word||target.t));
+    setTimeout(()=>{ if(!spk) return; spk.idx++; spk.idx>=spk.pool.length?renderSpeakDone():renderSpeakQ(); },1400);
+  }else{
+    spk.firstTry=false;
+    $("#spkFb").textContent="Almost! Listen and try again 💪";
+    say("Listen: "+(target.word||target.t));
+  }
+}
+function renderSpeakDone(){
+  const d=spk; spk=null;
+  $("#spkBody").innerHTML=`<div class="card starscreen"><div class="big">${d.stars>=4?"🎉":"💪"}</div>
+    <h2>You earned ${d.stars} star${d.stars===1?"":"s"}! ⭐</h2>
+    <p class="note">Great speaking practice! 🗣️</p>
+    <button class="btn coral" id="spkAgain">🎙️ Play again</button>
+    <div style="margin-top:10px"><button class="btn ghost" id="spkHome">← 🏠</button></div></div>`;
+  say(d.stars>=4?"Amazing speaking!":"Good trying! Practice makes perfect!");
+  $("#spkAgain").onclick=()=>startSpeak();
+  $("#spkHome").onclick=()=>{ renderHome(); show("s-home"); };
+}
 /* ================= EVENTS ================= */
 document.addEventListener("click",e=>{
   const sp=e.target.closest("[data-say]"); if(sp){ say(sp.dataset.say); return; }
@@ -741,6 +859,10 @@ document.addEventListener("click",e=>{
 $("#backHome").onclick=()=>{ renderHome(); show("s-home"); };
 $("#quizBtn").onclick=()=>startQuiz(sightSet===0?SIGHT_WORDS:SIGHT_WORDS.filter(s=>s.set===sightSet),"sight");
 $("#pairsBtn").onclick=()=>startPairs();
+if(!SR){ const sb=$("#speakBtn"); if(sb){ sb.disabled=true; sb.style.opacity=.5; } $("#speakNote").textContent="Voice input needs Chrome or Edge."; }
+else $("#speakBtn").onclick=()=>startSpeak();
+$("#spkBack").onclick=()=>{ stopSpeakRec(); spk=null; renderHome(); show("s-home"); };
+$("#spkSpeak").onclick=()=>say($("#spkOwl").textContent);
 $("#qzBack").onclick=()=>{ qz=null; renderHome(); show("s-home"); };
 $("#qzSpeak").onclick=()=>{ if(qz&&qz.target) say("Find: "+qz.target.w); };
 $("#owlSpeak").onclick=()=>say($("#owlText").textContent);

@@ -57,6 +57,9 @@ def extract_vocab(html: str):
     # story sentences: {e:"..",t:".."}
     for t in re.findall(r'\{e:"[^"]*",t:"([^"]+)"\}', html):
         texts.add(t)
+    # speak sentences: {t:"..",k:"..",e:".."}
+    for t in re.findall(r'\{t:"([^"]+)",k:"[^"]+",e:', html):
+        texts.add(t)
     # letter-sound keywords live in LEVELS letters arrays as {l:"s",w:"sun"}
     for w in re.findall(r'\{l:"[^"]",w:"([^"]+)"\}', html):
         texts.add(w)
