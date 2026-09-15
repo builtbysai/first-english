@@ -123,6 +123,8 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 .backrow{margin:0 0 12px;}
 .backbtn{border:0; background:#fff; border-radius:999px; padding:10px 18px; font:inherit; font-weight:800;
   box-shadow:var(--shadow); cursor:pointer; font-size:15px; color:var(--muted);}
+.together{background:#f6f4ff;border:2px solid #c9bdf5;border-radius:14px;padding:12px}
+.tchip{display:inline-block;background:#fff;border:2px solid #7c6bd6;border-radius:999px;padding:3px 12px;margin:2px;font-weight:800;color:#4a3d9e}
 .gate{position:fixed; top:14px; right:14px; z-index:60; border:0; background:rgba(255,255,255,.85);
   border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:var(--shadow);}
 .sheet{position:fixed; inset:0; z-index:70; background:rgba(51,48,42,.5); display:none; align-items:flex-end; justify-content:center;}
@@ -1027,6 +1029,57 @@ $("#owlSpeak").onclick=()=>say($("#owlText").textContent);
 let gateT=null;
 const gate=$("#gate");
 gate.addEventListener("pointerdown",()=>{ gateT=setTimeout(()=>{ renderParentProg(); $("#sheet").classList.add("on"); },1200); });
+/* ================= PARENT CO-PLAY (transfer outside the app) ================= */
+function togetherGet(){ try{ return JSON.parse(localStorage.getItem("fe_together")||"{}"); }catch(e){ return {}; } }
+function togetherSet(o){ try{ localStorage.setItem("fe_together",JSON.stringify(o)); }catch(e){} }
+function togetherData(){
+  const s=loadSRS(), out=[];
+  Object.keys(s).forEach(w=>{
+    const r=s[w], h=r.h||[];
+    const m=h.length>=3?h.reduce((a,b)=>a+b,0)/h.length:null;
+    out.push({w, m, ce:r.consecErr||0, n:h.length});
+  });
+  const struggling=out.filter(x=>x.n>=2&&(x.ce>=2||(x.m!==null&&x.m<0.6)))
+    .sort((a,b)=>b.ce-a.ce||(a.m||0)-(b.m||0)).slice(0,5);
+  const mastered=out.filter(x=>x.m!==null&&x.m>=0.8)
+    .sort((a,b)=>b.n-a.n).slice(0,8);
+  const learning=out.filter(x=>x.n>=1&&x.n<3||(x.m!==null&&x.m>=0.6&&x.m<0.8)).slice(0,6);
+  return {struggling, mastered, learning};
+}
+function tonightIdea(){
+  /* rotates daily: dialogic dinner question (Troseth: model the question, hand to parent)
+     or an offline word hunt with words from the child's learning zone */
+  const day=Math.floor(Date.now()/864e5), td=togetherData();
+  const doneLvls=[...prog.done].sort((a,b)=>b-a);
+  if(doneLvls.length&&day%2===0){
+    const li=doneLvls[day%doneLvls.length];
+    const dp=(DIALOG[li]||[]).find(p=>p.k==="grownup");
+    if(dp) return {t:"\uD83D\uDCAC Ask at dinner",
+      d:"Your child read the Level "+(li+1)+" story. At dinner, ask: \u201C"+dp.q+"\u201D Let them answer in their own words \u2014 any answer is a great answer!",
+      id:"ask"+li+"-"+day};
+  }
+  const pool=[...td.struggling.map(x=>x.w),...td.learning.map(x=>x.w)];
+  const srs=loadSRS(), fresh=SIGHT_WORDS.map(x=>x.w).filter(w=>!srs[w]);
+  const picks=[...new Set([...pool,...fresh])].slice(0,3);
+  return {t:"\uD83D\uDD0E Word hunt",
+    d:"Write these on sticky notes, hide them around the house, and hunt them together: "+picks.map(w=>"\u201C"+w+"\u201D").join(", ")+". Cheer every find! \uD83C\uDF89",
+    id:"hunt-"+day};
+}
+function renderTogether(){
+  const td=togetherData(), idea=tonightIdea(), tg=togetherGet(), done=!!tg[idea.id];
+  const chip=x=>`<span class="tchip">${x.w}</span>`;
+  return `<h3 style="margin:18px 0 8px">\uD83E\uDD1D Play together <span class="pnote">5 min, no screen</span></h3>
+  <div class="together">
+    <p style="margin:0 0 6px"><b>${idea.t}</b></p>
+    <p class="pnote" style="margin:0 0 10px">${idea.d}</p>
+    ${done?'<p style="color:#2a7">\u2705 Done today \u2014 nice work!</p>'
+          :'<button class="btn coral" id="tgDone">\u2705 We did it!</button>'}
+    ${td.struggling.length?`<p style="margin:12px 0 4px"><b>\uD83E\uDDE0 Gently practice:</b></p><div>${td.struggling.map(chip).join("")}</div>
+      <p class="pnote">Say the word, let them repeat, keep it light.</p>`:""}
+    ${td.mastered.length?`<p style="margin:12px 0 4px"><b>\uD83C\uDF1F Celebrate:</b></p><div>${td.mastered.map(chip).join("")}</div>
+      <p class="pnote">These are sticking \u2014 point them out in books!</p>`:""}
+  </div>`;
+}
 function renderParentProg(){
   const rows = LEVELS.map((L,i)=>{
     const st = prog.stars[i]||0;
@@ -1035,7 +1088,9 @@ function renderParentProg(){
   }).join("");
   const grad = localStorage.getItem("fe_grad") ? `<div class="pgrad">🎓 All 9 levels complete!</div>` : "";
   $("#parentProg").innerHTML = `<div class="pgrid">${rows}</div>${grad}
-    <div class="pfoot">🔥 ${streak.count} day streak · 📝 ${SIGHT_WORDS.length} sight words · 🔁 ${srsDue().length} due for review</div>`;
+    <div class="pfoot">🔥 ${streak.count} day streak · 📝 ${SIGHT_WORDS.length} sight words · 🔁 ${srsDue().length} due for review</div>${renderTogether()}`;
+  const tgBtn=$("#tgDone");
+  if(tgBtn) tgBtn.onclick=()=>{ const tg=togetherGet(); tg[tonightIdea().id]=1; togetherSet(tg); renderParentProg(); };
 }
 ["pointerup","pointerleave","pointercancel"].forEach(ev=>gate.addEventListener(ev,()=>clearTimeout(gateT)));
 $("#closeSheet").onclick=()=>$("#sheet").classList.remove("on");
