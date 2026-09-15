@@ -162,6 +162,10 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
       <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn">🎯 Quiz me</button>
         <span id="reviewWrap"></span></div>
     </div>
+    <div class="card"><h2>👂 Sound pairs</h2>
+      <p class="note" style="margin:4px 0 0">Hear the tiny difference — <i>ship</i> or <i>sheep</i>?</p>
+      <div class="center" style="margin-top:12px"><button class="btn coral" id="pairsBtn">👂 Play sound pairs</button></div>
+    </div>
     <div class="center"><span class="streak" id="streak">🔥 0 day streak</span></div>
   </main>
 </div>
@@ -636,6 +640,29 @@ function stepStory(){
   $("#gradOk").onclick=()=>$("#grad").classList.remove("on");
   $("#lvlQuiz").onclick=()=>startQuiz(LEVELS[cur].words,"level");
 }
+/* ================= MINIMAL PAIRS (listening discrimination) ================= */
+const MIN_PAIRS=[
+ {a:{w:"cat",e:"🐱"},b:{w:"hat",e:"🎩"}},
+ {a:{w:"dog",e:"🐶"},b:{w:"log",e:"🪵"}},
+ {a:{w:"sun",e:"☀️"},b:{w:"run",e:"🏃"}},
+ {a:{w:"pin",e:"📌"},b:{w:"pen",e:"🖊️"}},
+ {a:{w:"ship",e:"🚢"},b:{w:"sheep",e:"🐑"}},
+ {a:{w:"bed",e:"🛏️"},b:{w:"red",e:"🔴"}},
+ {a:{w:"cup",e:"☕"},b:{w:"cap",e:"🧢"}},
+ {a:{w:"fox",e:"🦊"},b:{w:"box",e:"📦"}},
+ {a:{w:"map",e:"🗺️"},b:{w:"mop",e:"🧹"}},
+ {a:{w:"van",e:"🚐"},b:{w:"pan",e:"🍳"}},
+ {a:{w:"hot",e:"🔥"},b:{w:"pot",e:"🍲"}},
+ {a:{w:"bug",e:"🐛"},b:{w:"hug",e:"🤗"}},
+ {a:{w:"fish",e:"🐟"},b:{w:"dish",e:"🍽️"}},
+ {a:{w:"sock",e:"🧦"},b:{w:"rock",e:"🪨"}},
+];
+function startPairs(){
+  const pairs=[...MIN_PAIRS].sort(()=>Math.random()-.5).slice(0,6);
+  const bank=[], pairOf={};
+  pairs.forEach(p=>{ bank.push(p.a,p.b); pairOf[p.a.w]=p.b.w; pairOf[p.b.w]=p.a.w; });
+  startQuiz(bank,"pairs",pairOf);
+}
 /* ================= SPACED REPETITION (sight words) ================= */
 const SRS_STEPS=[1,4,10,30];
 function loadSRS(){ try{ return JSON.parse(localStorage.getItem("fe_srs")||"{}"); }catch(e){ return {}; } }
@@ -652,13 +679,19 @@ function srsDue(){
 }
 /* ================= LISTENING QUIZ ================= */
 let qz=null;
-function startQuiz(bank,kind){
-  qz={bank, kind, pool:[...bank].sort(()=>Math.random()-.5).slice(0,5),idx:0,stars:0,firstTry:true,target:null};
+function startQuiz(bank,kind,pairOf){
+  qz={bank, kind, pairOf:pairOf||null, pool:[...bank].sort(()=>Math.random()-.5).slice(0,Math.min(6,bank.length)),idx:0,stars:0,firstTry:true,target:null};
   renderQuizQ(); show("s-quiz");
 }
 function renderQuizQ(){
   const target=qz.pool[qz.idx]; qz.target=target; qz.wrongStreak=0;
-  const others=[...qz.bank].filter(x=>x.w!==target.w).sort(()=>Math.random()-.5).slice(0,3);
+  let others;
+  if(qz.pairOf && qz.pairOf[target.w]){
+    const partner=qz.bank.find(x=>x.w===qz.pairOf[target.w]);
+    others=[partner,...[...qz.bank].filter(x=>x.w!==target.w&&x!==partner).sort(()=>Math.random()-.5).slice(0,2)];
+  }else{
+    others=[...qz.bank].filter(x=>x.w!==target.w).sort(()=>Math.random()-.5).slice(0,3);
+  }
   const opts=[target,...others].sort(()=>Math.random()-.5);
   $("#qzOwl").textContent="Tap the word you hear! 👂";
   $("#qzBody").innerHTML=`<div class="center"><span class="note">${qz.idx+1} of ${qz.pool.length}</span>
@@ -693,7 +726,7 @@ function renderQuizDone(){
     <h2>You earned ${qzDone.stars} star${qzDone.stars===1?"":"s"}! ⭐</h2>
     <button class="btn coral" id="qzAgain">🎯 Play again</button>
     <div style="margin-top:10px"><button class="btn ghost" id="qzHome">← 🏠</button></div></div>`;
-  const starWord = qzDone.kind==="sight" ? "sight word star" : "word star";
+  const starWord = qzDone.kind==="sight" ? "sight word star" : (qzDone.kind==="pairs" ? "listening star" : "word star");
   say(qzDone.stars>=4?`Amazing! You are a ${starWord}!`:"Good trying! Practice makes perfect!");
   $("#qzAgain").onclick=()=>startQuiz(qzDone.bank,qzDone.kind);
   $("#qzHome").onclick=()=>{ renderHome(); show("s-home"); };
@@ -707,6 +740,7 @@ document.addEventListener("click",e=>{
 });
 $("#backHome").onclick=()=>{ renderHome(); show("s-home"); };
 $("#quizBtn").onclick=()=>startQuiz(sightSet===0?SIGHT_WORDS:SIGHT_WORDS.filter(s=>s.set===sightSet),"sight");
+$("#pairsBtn").onclick=()=>startPairs();
 $("#qzBack").onclick=()=>{ qz=null; renderHome(); show("s-home"); };
 $("#qzSpeak").onclick=()=>{ if(qz&&qz.target) say("Find: "+qz.target.w); };
 $("#owlSpeak").onclick=()=>say($("#owlText").textContent);
