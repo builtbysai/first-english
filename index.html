@@ -642,7 +642,8 @@ function stepStory(){
   $("#stepbody").innerHTML = L.story.map((s,i)=>
     `<div class="story"><span class="se">${s.e}</span><span class="st2">${s.t}</span>
      <button class="spk" data-si="${i}">🔊</button></div>`).join("")
-    + `<div class="center" style="margin-top:14px"><button class="btn coral" id="finishLvl">⭐ I did it!</button></div>`
+    + `<div class="center" style="margin-top:14px"><button class="btn gold" id="talkBtn">💬 Let's talk about it!</button></div>`
+    + `<div class="center" style="margin-top:10px"><button class="btn coral" id="finishLvl">⭐ I did it!</button></div>`
     + `<div class="center" style="margin-top:10px"><button class="btn ghost" id="lvlQuiz">🎯 Quiz me on these words</button></div>`;
   $("#stepbody").querySelectorAll(".spk").forEach(b=>b.onclick=()=>say(L.story[+b.dataset.si].t));
   setTimeout(()=>say(L.story[0].t),700);
@@ -658,6 +659,7 @@ function stepStory(){
   };
   $("#gradOk").onclick=()=>$("#grad").classList.remove("on");
   $("#lvlQuiz").onclick=()=>startQuiz(LEVELS[cur].words,"level");
+  $("#talkBtn").onclick=()=>startTalk();
 }
 /* ================= MINIMAL PAIRS (listening discrimination) ================= */
 const MIN_PAIRS=[
@@ -848,6 +850,115 @@ function renderSpeakDone(){
   say(d.stars>=4?"Amazing speaking!":"Good trying! Practice makes perfect!");
   $("#spkAgain").onclick=()=>startSpeak();
   $("#spkHome").onclick=()=>{ renderHome(); show("s-home"); };
+}
+/* ================= TALK (dialogic reading: PEER/CROWD) ================= */
+/* Per-story prompts. k:"tap" = tap-to-choose (Completion/Wh-/Recall); k:"grownup" = parent co-play (Open-ended/Distancing). */
+const DIALOG=[
+ [ {k:"tap",q:"I see an ___.",opts:["ant","tin","mat"],a:0,key:"ant",expand:"Yes! I see an ant. A tiny ant!"},
+   {k:"tap",q:"What did I tap?",opts:["the tin","the ant","the mat"],a:0,key:"tin",expand:"Right! I tap the tin. Tap, tap, tap!"},
+   {k:"grownup",q:"Have you ever seen an ant? Tell a grown-up where!"} ],
+ [ {k:"tap",q:"The cat sat on the ___.",opts:["mat","hat","pen"],a:0,key:"mat",expand:"Yes! The cat sat on the mat. A soft mat!"},
+   {k:"tap",q:"Who sat on the mat?",opts:["the cat","the hen","the kid"],a:0,key:"cat",expand:"Right! The cat sat on the mat. Silly cat!"},
+   {k:"grownup",q:"Have you ever sat on a mat? Tell a grown-up about it!"} ],
+ [ {k:"tap",q:"A big pig in the ___.",opts:["mud","sun","bus"],a:0,key:"mud",expand:"Yes! A big pig in the mud. Squishy mud!"},
+   {k:"tap",q:"What is hot?",opts:["the sun","the mud","the bus"],a:0,key:"sun",expand:"Right! The sun is hot. What a hot sun!"},
+   {k:"grownup",q:"Have you ever played in mud? Tell a grown-up about it!"} ],
+ [ {k:"tap",q:"The fork is in the ___.",opts:["jar","boat","pie"],a:0,key:"jar",expand:"Yes! The fork is in the jar."},
+   {k:"tap",q:"What do I like?",opts:["the rain","the pie","the boat"],a:0,key:"rain",expand:"Right! I like the rain. Pitter-patter rain!"},
+   {k:"grownup",q:"Do you like the rain? Tell a grown-up what you do on rainy days!"} ],
+ [ {k:"tap",q:"The van is ___.",opts:["red","big","hot"],a:0,key:"red",expand:"Yes! The van is red. A red van!"},
+   {k:"tap",q:"What is big?",opts:["the moon","the van","the song"],a:0,key:"moon",expand:"Right! The moon is big. A big round moon!"},
+   {k:"grownup",q:"What song do you like? Sing a little for a grown-up!"} ],
+ [ {k:"tap",q:"The fish is in the ___.",opts:["dish","ship","house"],a:0,key:"dish",expand:"Yes! The fish is in the dish."},
+   {k:"tap",q:"Who is in the house?",opts:["the queen","the fish","the ship"],a:0,key:"queen",expand:"Right! The queen is in the house. Hello, queen!"},
+   {k:"grownup",q:"Have you ever seen a ship? Tell a grown-up about it!"} ],
+ [ {k:"tap",q:"The bear is in the ___.",opts:["car","star","light"],a:0,key:"car",expand:"Yes! The bear is in the car. Beep beep!"},
+   {k:"tap",q:"What is blue?",opts:["the star","the car","the light"],a:0,key:"star",expand:"Right! I like the blue star. Twinkle, twinkle!"},
+   {k:"grownup",q:"What do you see in the sky at night? Tell a grown-up!"} ],
+ [ {k:"tap",q:"The fox is in the ___.",opts:["box","wax","yams"],a:0,key:"box",expand:"Yes! The fox is in the box. Sneaky fox!"},
+   {k:"tap",q:"What does the fox have?",opts:["six boxes","the wax","yams"],a:0,key:"boxes",expand:"Right! The fox has six boxes. One, two, three, four, five, six!"},
+   {k:"grownup",q:"Have you ever tasted yams? Tell a grown-up what you like to eat!"} ],
+ [ {k:"tap",q:"The duck is in the ___.",opts:["mud","hill","sock"],a:0,key:"mud",expand:"Yes! The duck is in the mud. Quack quack!"},
+   {k:"tap",q:"What is on the hill?",opts:["the bell","the duck","the pig"],a:0,key:"bell",expand:"Right! The bell is on the hill. Ding-dong!"},
+   {k:"grownup",q:"What makes a fun sound like a bell? Tell a grown-up!"} ]
+];
+let talk=null;
+function startTalk(){
+  talk={prompts:DIALOG[cur]||[], idx:0, cur:null};
+  $("#owlText").textContent="Let's talk about the story! \uD83D\uDCAC";
+  renderTalk();
+}
+function renderTalk(){
+  const p=talk.prompts[talk.idx]; talk.cur=p;
+  const spoken=p.q.replace(/___/g,"...");
+  if(p.k==="tap"){
+    $("#stepbody").innerHTML=`<div class="card"><div class="center note">${talk.idx+1} of ${talk.prompts.length}</div>
+      <h2 style="text-align:center">${p.q}</h2>
+      <div class="center"><button class="btn ghost" id="talkHear">\uD83D\uDD0A Hear the question</button></div>
+      <div class="pill-row" id="talkOpts">${p.opts.map((o,i)=>`<button class="btn big" data-i="${i}">${o}</button>`).join("")}</div>
+      <div class="center" id="talkFb" style="min-height:26px;font-weight:700"></div></div>
+      <div class="center" style="margin-top:10px"><button class="btn ghost" id="talkBack">\u2190 Back to story</button></div>`;
+    $("#talkHear").onclick=()=>say(spoken);
+    $("#talkBack").onclick=()=>{ talk=null; renderLevel(); };
+    setTimeout(()=>{ if(talk&&talk.cur===p) say(spoken); },400);
+    $("#talkOpts").querySelectorAll("button").forEach(b=>b.onclick=()=>talkAnswer(+b.dataset.i));
+  }else{
+    $("#stepbody").innerHTML=`<div class="card" style="text-align:center"><div class="center note">${talk.idx+1} of ${talk.prompts.length}</div>
+      <div style="font-size:56px">\uD83D\uDDE3\uFE0F</div>
+      <h2>${p.q}</h2>
+      <p class="note">Tell a grown-up your answer, then tap the star! \u2B50</p>
+      <button class="btn coral" id="talkStar">\u2B50 Great answer!</button>
+      <div class="center" style="margin-top:10px"><button class="btn ghost" id="talkBack">\u2190 Back to story</button></div></div>`;
+    $("#talkBack").onclick=()=>{ talk=null; renderLevel(); };
+    setTimeout(()=>{ if(talk&&talk.cur===p) say(p.q); },400);
+    $("#talkStar").onclick=()=>{ say("Great talking!"); talkNext(); };
+  }
+}
+function talkAnswer(i){
+  const p=talk.cur;
+  if(i!==p.a){ $("#talkFb").textContent="Almost! Listen and try again \uD83D\uDCAA"; say(p.q.replace(/___/g,"...")); return; }
+  /* Evaluate + Expand + Repeat (PEER) */
+  $("#stepbody").innerHTML=`<div class="card" style="text-align:center">
+    <div style="font-size:48px">\u2B50</div>
+    <h2>Yes!</h2>
+    <p style="font-size:19px;font-weight:700">${p.expand}</p>
+    <p class="note">Now you say it! \uD83D\uDDE3\uFE0F</p>
+    <div class="center"><button class="micbtn" id="talkMic">\uD83C\uDF99\uFE0F</button></div>
+    <div class="center note">Tap the mic and say "<b>${p.key}</b>"</div>
+    <div class="center" id="talkFb2" style="min-height:26px;font-weight:700"></div></div>`;
+  say(p.expand);
+  const mic=$("#talkMic");
+  if(SR){ mic.onclick=()=>talkMic(p); }
+  else { mic.style.display="none";
+    $("#talkFb2").innerHTML=`<button class="btn coral" id="talkNext2">Say it to a grown-up! \u2192</button>`;
+    $("#talkNext2").onclick=()=>talkNext(); }
+}
+function talkMic(p){
+  let rec; try{ rec=new SR(); }catch(e){ talkNext(); return; }
+  rec.lang="en-US"; rec.interimResults=false; rec.maxAlternatives=1;
+  $("#talkFb2").textContent="Listening... \uD83D\uDC42";
+  rec.onresult=(ev)=>{
+    const heard=ev.results[0][0].transcript;
+    const norm=heard.toLowerCase().replace(/[^a-z ]/g," ").replace(/\s+/g," ").trim();
+    const hit=norm.split(" ").includes(p.key);
+    $("#talkFb2").textContent=hit?"Great talking! \uD83D\uDDE3\uFE0F\u2B50":"Good talking! \uD83D\uDDE3\uFE0F";
+    say(hit?"Great talking!":"Good talking!");
+    setTimeout(talkNext,1500);
+  };
+  rec.onerror=()=>{ $("#talkFb2").textContent="Good talking! \uD83D\uDDE3\uFE0F"; setTimeout(talkNext,1200); };
+  try{ rec.start(); }catch(e){ talkNext(); }
+}
+function talkNext(){
+  if(!talk) return;
+  talk.idx++;
+  if(talk.idx>=talk.prompts.length){
+    $("#stepbody").innerHTML=`<div class="card" style="text-align:center"><div style="font-size:56px">\uD83D\uDCAC\uD83C\uDF89</div>
+      <h2>Great talking!</h2><p class="note">You talked all about the story! \uD83D\uDDE3\uFE0F\u2B50</p>
+      <button class="btn coral" id="talkDone">\u2190 Back to story</button></div>`;
+    say("Great talking! You are a super talker!");
+    bumpStreak();
+    $("#talkDone").onclick=()=>{ talk=null; renderLevel(); };
+  }else renderTalk();
 }
 /* ================= EVENTS ================= */
 document.addEventListener("click",e=>{
