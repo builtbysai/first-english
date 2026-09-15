@@ -125,8 +125,14 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
   box-shadow:var(--shadow); cursor:pointer; font-size:15px; color:var(--muted);}
 .together{background:#f6f4ff;border:2px solid #c9bdf5;border-radius:14px;padding:12px}
 .tchip{display:inline-block;background:#fff;border:2px solid #7c6bd6;border-radius:999px;padding:3px 12px;margin:2px;font-weight:800;color:#4a3d9e}
-.gate{position:fixed; top:14px; right:14px; z-index:60; border:0; background:rgba(255,255,255,.85);
-  border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:var(--shadow);}
+.gate{position:fixed; top:14px; right:14px; z-index:60; border:0; --p:0;
+  background:conic-gradient(#7c6bd6 calc(var(--p)*1%), rgba(255,255,255,.85) 0);
+  border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:var(--shadow);
+  touch-action:none; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none;}
+.gatehint{position:fixed; top:66px; right:10px; z-index:80; background:#33302a; color:#fff; font-size:13px;
+  padding:8px 12px; border-radius:10px; opacity:0; transform:translateY(-4px);
+  transition:opacity .25s, transform .25s; pointer-events:none; max-width:230px; text-align:center;}
+.gatehint.on{opacity:1; transform:none;}
 .sheet{position:fixed; inset:0; z-index:70; background:rgba(51,48,42,.5); display:none; align-items:flex-end; justify-content:center;}
 .sheet.on{display:flex;}
 .pgrid{display:flex; flex-direction:column; gap:4px;}
@@ -151,7 +157,8 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 </style>
 </head>
 <body>
-<button class="gate" id="gate" aria-label="Settings">⚙️</button>
+<button class="gate" id="gate" aria-label="Grown-ups settings (press and hold)">⚙️</button>
+<div class="gatehint" id="gateHint">🔒 Press &amp; hold the gear to open Grown-ups</div>
 
 <!-- HOME: level map -->
 <div class="screen on" id="s-home">
@@ -1026,9 +1033,21 @@ $("#qzBack").onclick=()=>{ qz=null; renderHome(); show("s-home"); };
 $("#qzSpeak").onclick=()=>{ if(qz&&qz.target) say("Find: "+qz.target.w); };
 $("#owlSpeak").onclick=()=>say($("#owlText").textContent);
 /* parent gate: press & hold */
-let gateT=null;
 const gate=$("#gate");
-gate.addEventListener("pointerdown",()=>{ gateT=setTimeout(()=>{ renderParentProg(); $("#sheet").classList.add("on"); },1200); });
+/* parent gate v2: press & hold with visible progress (kids stay out, grown-ups get in) */
+const GATE_MS=1200;
+let gateActive=false, gateStart=0, gateRAF=null;
+const gateHint=$("#gateHint");
+function gateClear(){ gateActive=false; if(gateRAF)cancelAnimationFrame(gateRAF); gateRAF=null; gate.style.setProperty("--p",0); }
+function gateOpen(){ gateClear(); renderParentProg(); $("#sheet").classList.add("on"); }
+function gateTick(){
+  const p=Math.min(1,(performance.now()-gateStart)/GATE_MS);
+  gate.style.setProperty("--p",(p*100).toFixed(1));
+  if(p>=1){ gateOpen(); return; }
+  gateRAF=requestAnimationFrame(gateTick);
+}
+gate.addEventListener("pointerdown",e=>{ e.preventDefault(); gateActive=true; gateStart=performance.now(); gateTick(); });
+gate.addEventListener("contextmenu",e=>e.preventDefault());
 /* ================= PARENT CO-PLAY (transfer outside the app) ================= */
 function togetherGet(){ try{ return JSON.parse(localStorage.getItem("fe_together")||"{}"); }catch(e){ return {}; } }
 function togetherSet(o){ try{ localStorage.setItem("fe_together",JSON.stringify(o)); }catch(e){} }
@@ -1092,7 +1111,13 @@ function renderParentProg(){
   const tgBtn=$("#tgDone");
   if(tgBtn) tgBtn.onclick=()=>{ const tg=togetherGet(); tg[tonightIdea().id]=1; togetherSet(tg); renderParentProg(); };
 }
-["pointerup","pointerleave","pointercancel"].forEach(ev=>gate.addEventListener(ev,()=>clearTimeout(gateT)));
+["pointerup","pointerleave","pointercancel"].forEach(ev=>gate.addEventListener(ev,()=>{
+  if(!gateActive) return;
+  const done=document.getElementById("sheet").classList.contains("on");
+  gateClear();
+  if(!done){ gateHint.classList.add("on"); clearTimeout(gateHint._t); gateHint._t=setTimeout(()=>gateHint.classList.remove("on"),1800); }
+}));
+gate.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); gateOpen(); } });
 $("#closeSheet").onclick=()=>$("#sheet").classList.remove("on");
 $("#voiceTest").onclick=()=>say("Hello! The cat sat on the mat.");
 $("#resetProg").onclick=()=>{ if(confirm("Reset all progress?")){ prog={done:[],stars:{}}; save(); renderHome(); $("#sheet").classList.remove("on"); } };
