@@ -30,16 +30,18 @@ OUT = ROOT / "audio"
 VOICE = "en-US-AvaNeural"   # warm, clear neural voice; good for young learners
 RATE = "-8%"                # slightly slow for clarity
 
-# Fixed UI phrases the app speaks (must match say() call sites)
+# Fixed UI phrases the app speaks (must be the EXACT utterance passed to say();
+# dynamic "Find: X" / "Say: X" / "Listen: X" prompts bake per-word audio only)
 PHRASES = [
     "Try again!", "Yes!", "Amazing!", "Great!", "Wonderful!",
     "Good trying! Practice makes perfect!",
     "Hello! I am Ollie. Tap a picture to start.",
-    "Hello! I'm Ollie. Tap a level to begin.",
     "Tap the word you hear!",
-    "You are a sight word star!",
-    "You are a word star!",
-    "Amazing! You are a reading star!",
+    "Amazing! You are a sight word star!",
+    "Amazing! You are a listening star!",
+    "Amazing! You are a word star!",
+    "Amazing! You read a story!",
+    "Great talking! You are a super talker!",
     "Wow! You finished every level! You are a reading star!",
     "Hello! The cat sat on the mat.",
 ]
@@ -54,14 +56,22 @@ def extract_vocab(html: str):
     texts = set()
     for w in re.findall(r'\{w:"([^"]+)"', html):
         texts.add(w)
-    # story sentences: {e:"..",t:".."}
+    # story sentences: {t:"..",e:".."} (t-first; accept either order)
+    for t in re.findall(r'\{t:"([^"]+)",e:', html):
+        texts.add(t)
     for t in re.findall(r'\{e:"[^"]*",t:"([^"]+)"\}', html):
         texts.add(t)
     # speak sentences: {t:"..",k:"..",e:".."}
     for t in re.findall(r'\{t:"([^"]+)",k:"[^"]+",e:', html):
         texts.add(t)
+    # dialog prompts: {k:"tap",q:"..",...} and expand:".."
+    for t in re.findall(r'\{k:"(?:tap|grownup)",q:"([^"]+)"', html):
+        texts.add(t.replace('___', '...'))
+    for t in re.findall(r'expand:"([^"]+)"', html):
+        texts.add(t)
     # letter-sound keywords live in LEVELS letters arrays as {l:"s",w:"sun"}
-    for w in re.findall(r'\{l:"[^"]",w:"([^"]+)"\}', html):
+    # (l can be a digraph/trigraph: ai, sh, igh ...)
+    for w in re.findall(r'\{l:"[^"]+",w:"([^"]+)"\}', html):
         texts.add(w)
     texts.update(PHRASES)
     # "Find: X" / "Listen: X" prompts are dynamic; bake the per-word audio only.
@@ -82,17 +92,19 @@ async def main():
     manifest = {}
     sem = asyncio.Semaphore(6)
     done = 0
-    seen_slugs = set()
+    seen_slugs = {}
+    collisions = []
 
     async def one(text):
         nonlocal done
         slug = slugify(text)
-        # de-dupe slugs ("a" the letter vs "a" the word etc.)
-        base, i = slug, 2
-        while slug in seen_slugs:
-            slug = f"{base}-{i}"
-            i += 1
-        seen_slugs.add(slug)
+        # Slug collisions between DIFFERENT texts (e.g. "Hello!" vs "Hello")
+        # would make the runtime play the wrong clip. Fail loudly instead of
+        # silently writing unreachable files.
+        if slug in seen_slugs and seen_slugs[slug] != text:
+            collisions.append((seen_slugs[slug], text))
+            return
+        seen_slugs[slug] = text
         fn = f"{slug}.mp3"
         path = OUT / fn
         if not path.exists():
@@ -103,6 +115,11 @@ async def main():
             print(f"  {done}/{len(texts)}")
 
     await asyncio.gather(*(one(t) for t in texts))
+    if collisions:
+        print("SLUG COLLISIONS (different texts, same file) — fix slugify before shipping:")
+        for a, b in collisions:
+            print(f"  {a!r}  vs  {b!r}")
+        sys.exit(1)
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     total_mb = sum(p.stat().st_size for p in OUT.glob("*.mp3")) / 1e6
     print(f"done: {len(manifest)} clips, {total_mb:.1f} MB -> {OUT}/")

@@ -118,6 +118,9 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 .btn{border:0; border-radius:18px; padding:16px 30px; font:inherit; font-size:19px; font-weight:800;
   cursor:pointer; background:var(--teal); color:#fff; box-shadow:var(--shadow); margin:6px;}
 .btn.coral{background:var(--coral);} .btn.ghost{background:#fff; color:var(--ink);}
+.btn.gold{background:linear-gradient(180deg,#ffd873,#f0b73e); color:#6b4a00;}
+.btn.big{font-size:21px; padding:18px 26px;}
+.pill-row{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:14px 0;}
 .btn:active{transform:scale(.96);}
 .center{text-align:center;}
 .backrow{margin:0 0 12px;}
@@ -148,7 +151,8 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 .gradin h2{margin:12px 0 8px; font-size:26px;}
 .gradin p{color:#6b6257; margin:0 0 20px;}
 .sheetin{background:var(--paper); border-radius:28px 28px 0 0; padding:24px 20px calc(30px + env(safe-area-inset-bottom));
-  width:100%; max-width:560px;}
+  width:100%; max-width:560px; max-height:92dvh; overflow-y:auto; overscroll-behavior:contain;}
+/* scroll containment: overlay content grows (Play together etc.) but Close/Reset stay reachable */
 .sheetin h2{margin:0 0 10px;}
 .sheetin p{color:var(--muted); font-size:14.5px;}
 .sheetin .btn{width:100%; margin:8px 0;}
@@ -457,11 +461,14 @@ const STEP_DEFS = [
 ];
 /* split a word into its sound units (digraphs stay together): rain -> [r,ai,n] */
 const GRAPHEMES = ["ai","oa","ie","ee","or","ng","oo","sh","ch","th","qu","ou","oi","ue","er","ar","air","ear","igh","ck","ff","ll","ss","zz"];
-function segWord(w){
+/* Segment using only graphemes the child's level has been taught: a later
+   level's tile (e.g. L9 "ll" inside L8 "yell") can never appear early. */
+function segWord(w, graphemes){
+  const gs=graphemes||GRAPHEMES;
   const out=[], lw=w.toLowerCase(); let i=0;
   while(i<w.length){
     let m=null;
-    for(const g of GRAPHEMES){ if(lw.startsWith(g,i) && (!m||g.length>m.length)) m=g; }
+    for(const g of gs){ if(lw.startsWith(g,i) && (!m||g.length>m.length)) m=g; }
     if(m){ out.push(w.slice(i,i+m.length)); i+=m.length; }
     else { out.push(w[i]); i++; }
   }
@@ -475,11 +482,18 @@ const OWL_SAY = {
   story:"You can read a whole story now! Tap 🔊 to hear it.",
 };
 /* ================= STATE ================= */
-let prog = JSON.parse(localStorage.getItem("fe_prog")||'{"done":[],"stars":{}}');
-let streak = JSON.parse(localStorage.getItem("fe_streak")||'{"count":0,"last":""}');
+/* Single safe reader for every JSON key: corrupt storage can never blank the app. */
+function loadJSON(key,fb){ try{ const v=JSON.parse(localStorage.getItem(key)); return (v&&typeof v==="object")?v:fb; }catch(e){ return fb; } }
+function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+let prog = loadJSON("fe_prog",{"done":[],"stars":{}});
+let streak = loadJSON("fe_streak",{"count":0,"last":""});
 let cur = 0, step = "letters";
 const $ = s=>document.querySelector(s);
-function save(){ localStorage.setItem("fe_prog", JSON.stringify(prog)); }
+function save(){ saveJSON("fe_prog",prog); }
+/* Generation token for delayed work: bumped on every screen/step change, so a
+   stale timeout from a previous screen can never fire or speak. */
+let screenSeq=0;
+function later(ms,fn){ const s=screenSeq; return setTimeout(()=>{ if(s===screenSeq) fn(); },ms); }
 /* ================= SPEECH ================= */
 let voices=[], bestVoice=null;
 function pickVoice(){
@@ -504,16 +518,34 @@ fetch("audio/manifest.json").then(r=>r.ok?r.json():null).then(m=>{ FE_AUDIO.mani
 let curAudio=null;
 function slugify(w){ return w.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }
 function stopSay(){ try{ speechSynthesis.cancel(); }catch(e){} if(curAudio){ try{curAudio.pause();}catch(e){} curAudio=null; } }
-function playBaked(text){
+function playBaked(text,slow){
   const m=FE_AUDIO.manifest; if(!m) return false;
   const f=m[slugify(text)]; if(!f) return false;
-  try{ stopSay(); curAudio=new Audio("audio/"+f); curAudio.play().catch(()=>{}); return true; }catch(e){ return false; }
+  /* A baked clip that fails to load/play must never swallow the word:
+     fall back to device TTS so every utterance is heard. */
+  try{
+    stopSay();
+    const a=new Audio("audio/"+f); curAudio=a;
+    const done=ok=>{ if(curAudio===a){ curAudio=null; if(!ok) ttsSay(text,slow); } };
+    a.onended=()=>done(true); a.onerror=()=>done(false);
+    const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>done(false));
+    return true;
+  }catch(e){ return false; }
 }
+let _sayLast={t:"",at:0};
 function say(text, slow){
-  if(playBaked(text)) return;
+  /* Single choke point for ALL speech: overlapping event paths (delegated
+     [data-say] clicks + direct onclick handlers) can no longer double-speak.
+     An identical utterance requested within 800ms is dropped. */
+  const _now=Date.now();
+  if(text===_sayLast.t&&_now-_sayLast.at<800) return;
+  _sayLast={t:text,at:_now};
+  if(!playBaked(text,slow)) ttsSay(text,slow);
+}
+function ttsSay(text,slow){
   if(!("speechSynthesis" in window)) return;
   try{
-    speechSynthesis.cancel();
+    stopSay(); /* stopSay also halts any baked clip: speech never overlaps */
     const u=new SpeechSynthesisUtterance(text);
     u.lang="en-US"; u.rate=slow===false?0.95:0.85; u.pitch=1.05;
     if(bestVoice) u.voice=bestVoice;
@@ -522,6 +554,7 @@ function say(text, slow){
 }
 /* ================= SCREENS ================= */
 function show(id){
+  screenSeq++; stopSay(); /* new screen: stale timers die, stale speech stops */
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
   $("#"+id).classList.add("on"); window.scrollTo({top:0});
 }
@@ -531,7 +564,7 @@ function bumpStreak(){
   if(streak.last!==t){
     const y=new Date(); y.setDate(y.getDate()-1);
     streak.count = (streak.last===y.toISOString().slice(0,10)) ? streak.count+1 : 1;
-    streak.last=t; localStorage.setItem("fe_streak",JSON.stringify(streak));
+    streak.last=t; saveJSON("fe_streak",streak);
   }
 }
 function renderHome(){
@@ -552,10 +585,11 @@ function renderHome(){
     `<button class="sw" data-say="${s.w}">${s.e?`<span class="swe">${s.e}</span>`:""}<span class="sww">${s.w}</span></button>`).join("");
   const due=srsDue();
   $("#reviewWrap").innerHTML = due.length?` <button class="btn ghost" id="reviewBtn">🔁 Review ${due.length}</button>`:"";
-  const rb=$("#reviewBtn"); if(rb) rb.onclick=()=>startQuiz(due.slice(0,10),"sight-review");
+  const rb=$("#reviewBtn"); if(rb) rb.onclick=()=>startQuiz({bank:due.slice(0,10),kind:"sight-review"});
 }
 function openLevel(i){ cur=i; step="letters"; renderLevel(); show("s-level"); }
 function renderLevel(){
+  screenSeq++; /* new step: stale timers from the previous step die */
   const L=LEVELS[cur];
   $("#steptabs").innerHTML = STEP_DEFS.map(s=>
     `<button class="stab ${step===s.id?"on "+({letters:"s1",listen:"s2",blend:"s3",read:"s4",story:"s4"}[s.id]):""}" data-step="${s.id}">${s.icon} ${s.label}</button>`).join("");
@@ -593,10 +627,10 @@ function gameRound(kind){
       + `<div class="choices">`+opts.map(o=>`<button class="choice" data-w="${o.w}">${o.e}</button>`).join("")+`</div>
       <div class="center note" style="margin-top:10px">${idx+1} / ${words.length}</div>`;
     const play=()=>say(target.w);
-    $("#rwSay").onclick=play; setTimeout(play, 500);
+    $("#rwSay").onclick=play; later(500,play);
     body.querySelectorAll(".choice").forEach(ch=>ch.onclick=()=>{
-      if(ch.dataset.w===target.w){ ch.classList.add("right"); ok++; say("Yes! "+target.w,false); setTimeout(()=>{idx++;round();},900); }
-      else { ch.classList.add("wrong"); say("Try again"); setTimeout(()=>ch.classList.remove("wrong"),450); }
+      if(ch.dataset.w===target.w){ ch.classList.add("right"); ok++; say("Yes! "+target.w,false); later(900,()=>{idx++;round();}); }
+      else { ch.classList.add("wrong"); say("Try again"); later(450,()=>ch.classList.remove("wrong")); }
     });
   }
   function finish(){
@@ -628,21 +662,27 @@ function stepBlend(){
       $("#goRead").onclick=()=>{ step="read"; renderLevel(); }; return;
     }
     const t=words[idx];
+    const taughtGraphs=L.letters.filter(c=>c.l.length>1).map(c=>c.l.toLowerCase());
     body.innerHTML=`<div class="center" style="font-size:64px;margin:6px 0">${t.e}</div>
-      <div class="tiles" id="tiles">`+segWord(t.w).map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
+      <div class="tiles" id="tiles">`+segWord(t.w,taughtGraphs).map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
       <div class="center"><button class="btn" id="sayWord">🔊 ${t.w}</button></div>
       <div class="center note" style="margin-top:8px">Tap each letter left to right 👉</div>
       <div class="center note">${idx+1} / ${words.length}</div>`;
     const tiles=[...body.querySelectorAll(".tile")];
-    const kw={}; L.letters.forEach(c=>kw[c.l]=c.w);
-    let tapped=0;
+    /* completion is tile-STATE based, not tap-count based: double-taps can't skip */
     tiles.forEach(tb=>tb.onclick=()=>{
-      tb.classList.add("lit"); say(kw[tb.textContent]||tb.textContent);
-      tapped++;
-      if(tapped>=tiles.length){ setTimeout(()=>{ say(t.w); setTimeout(()=>{idx++;round();},1100); },700); }
+      if(tb.classList.contains("lit")) return;
+      tb.classList.add("lit");
+      const seg=tb.textContent.toLowerCase();
+      const cands=L.letters.filter(c=>c.l.toLowerCase()===seg);
+      const hit=cands.find(c=>c.w.toLowerCase()===t.w.toLowerCase())||cands[0];
+      say(hit?hit.w:tb.textContent);
+      if(tiles.every(x=>x.classList.contains("lit"))){
+        later(700,()=>{ say(t.w); later(1100,()=>{idx++;round();}); });
+      }
     });
     $("#sayWord").onclick=()=>say(t.w);
-    setTimeout(()=>say(t.w),600);
+    later(600,()=>say(t.w));
   }
   round();
 }
@@ -667,7 +707,7 @@ function stepStory(){
     }
   };
   $("#gradOk").onclick=()=>$("#grad").classList.remove("on");
-  $("#lvlQuiz").onclick=()=>startQuiz(adaptivePool(LEVELS[cur].words,"level"),"level");
+  $("#lvlQuiz").onclick=()=>startQuiz({bank:adaptivePool(LEVELS[cur].words,"level"),kind:"level"});
   $("#talkBtn").onclick=()=>startTalk();
 }
 /* ================= MINIMAL PAIRS (listening discrimination) ================= */
@@ -698,12 +738,12 @@ function startPairs(){
   [3,2,1,0].forEach(sc=>{ const g=byScore[sc]; if(g) pairs.push(...[...g].sort(()=>Math.random()-.5)); });
   const bank=[], pairOf={};
   pairs.slice(0,3).forEach(p=>{ bank.push(p.a,p.b); pairOf[p.a.w]=p.b.w; pairOf[p.b.w]=p.a.w; });
-  startQuiz(bank,"pairs",pairOf);
+  startQuiz({bank,kind:"pairs",pairOf});
 }
 /* ================= SPACED REPETITION (sight words) ================= */
 const SRS_STEPS=[1,4,10,30];
-function loadSRS(){ try{ return JSON.parse(localStorage.getItem("fe_srs")||"{}"); }catch(e){ return {}; } }
-function saveSRS(o){ try{ localStorage.setItem("fe_srs", JSON.stringify(o)); }catch(e){} }
+function loadSRS(){ return loadJSON("fe_srs",{}); }
+function saveSRS(o){ saveJSON("fe_srs",o); }
 function srsRecord(word, okFirst){
   const s=loadSRS(), r=s[word]||{streak:0,iv:1,due:0}, now=Date.now();
   if(r.lastSeen && now-r.lastSeen>14*864e5){ r.h=[]; r.consecErr=0; } /* old failures decay */
@@ -712,16 +752,8 @@ function srsRecord(word, okFirst){
   r.h=(r.h||[]); r.h.push(okFirst?1:0); if(r.h.length>5) r.h=r.h.slice(-5);
   r.lastSeen=now; r.due=now+r.iv*864e5; s[word]=r; saveSRS(s);
 }
-function masteryOf(word){ /* null until 3 attempts, else fraction correct over last 5 */
-  const r=loadSRS()[word]; if(!r||!r.h||r.h.length<3) return null;
-  return r.h.reduce((a,b)=>a+b,0)/r.h.length;
-}
-function srsDueFor(bank){
-  const s=loadSRS(), now=Date.now();
-  return bank.filter(w=>{ const r=s[w.w]; return r&&r.due<=now; });
-}
-function adaptGet(){ try{ return JSON.parse(localStorage.getItem("fe_adapt")||"{}"); }catch(e){ return {}; } }
-function adaptSet(o){ try{ localStorage.setItem("fe_adapt",JSON.stringify(o)); }catch(e){} }
+function adaptGet(){ return loadJSON("fe_adapt",{}); }
+function adaptSet(o){ saveJSON("fe_adapt",o); }
 function challengeFor(bank,kind){ /* one step harder, not yet mastered */
   const s=loadSRS();
   const fresh=w=>{ const r=s[w.w]; return !r||!r.h||r.h.length<3||(r.h.reduce((a,b)=>a+b,0)/r.h.length)<0.8; };
@@ -756,13 +788,27 @@ function srsDue(){
   return SIGHT_WORDS.filter(w=>{ const r=s[w.w]; return r&&r.due<=now; });
 }
 /* ================= LISTENING QUIZ ================= */
+/* Quiz-kind registry: every behavior that varies by quiz kind (SRS recording,
+   adaptive-history key, done-screen label, smart-practice note) reads from
+   this table. Adding a new kind can never silently miss a behavior again. */
+const QUIZ_KINDS={
+  "sight":       {srs:true, adaptKey:"sight", starLabel:"sight word star", smartNote:true},
+  "sight-review":{srs:true, adaptKey:"sight", starLabel:"sight word star", smartNote:true},
+  "pairs":       {srs:true, adaptKey:"pairs", starLabel:"listening star",  smartNote:true},
+  "level":       {srs:true, adaptKey:"level", starLabel:"word star",       smartNote:true},
+};
+function quizKind(k){ return QUIZ_KINDS[k]||{srs:false,adaptKey:null,starLabel:"word star",smartNote:false}; }
 let qz=null;
-function startQuiz(bank,kind,pairOf){
-  qz={bank, kind, pairOf:pairOf||null, pool:[...bank].sort(()=>Math.random()-.5).slice(0,Math.min(6,bank.length)),idx:0,stars:0,firstTry:true,target:null};
+function startQuiz(cfg){
+  /* Single construction site for quiz config: replay reuses qz.config, so a
+     replay can never lose fields (pairOf, kind) again. */
+  if(!cfg||!cfg.bank||!cfg.bank.length) return; /* implicit non-empty contract, now explicit */
+  const bank=cfg.bank, kind=cfg.kind, pairOf=cfg.pairOf||null;
+  qz={config:{bank,kind,pairOf}, bank, kind, pairOf, pool:[...bank].sort(()=>Math.random()-.5).slice(0,Math.min(6,bank.length)),idx:0,stars:0,firstTry:true,target:null};
   renderQuizQ(); show("s-quiz");
 }
 function renderQuizQ(){
-  const target=qz.pool[qz.idx]; qz.target=target; qz.wrongStreak=0;
+  const target=qz.pool[qz.idx]; qz.target=target; qz.wrongStreak=0; qz.answered=false; /* new question re-arms the round lock */
   let others;
   if(qz.pairOf && qz.pairOf[target.w]){
     const partner=qz.bank.find(x=>x.w===qz.pairOf[target.w]);
@@ -782,10 +828,10 @@ function renderQuizQ(){
   setTimeout(()=>{ if(qz&&qz.target===target) say("Find: "+target.w); },400);
 }
 function quizPick(i,opts,target,btn){
-  if(btn.classList.contains("right")||!qz) return;
+  if(!qz||qz.answered) return; /* round already answered: stray taps can't pile on hint speech */
   if(opts[i].w===target.w){
-    btn.classList.add("right");
-    if(qz.kind==="sight"||qz.kind==="sight-review"||qz.kind==="pairs"||qz.kind==="level") srsRecord(target.w, qz.firstTry);
+    qz.answered=true; btn.classList.add("right");
+    if(quizKind(qz.kind).srs) srsRecord(target.w, qz.firstTry);
     if(qz.firstTry){ qz.stars++; } else { qz.miss=(qz.miss||0)+1; }
     say("Yes! "+target.w+".");
     setTimeout(()=>{ if(!qz) return; qz.idx++; qz.firstTry=true; qz.idx>=qz.pool.length?renderQuizDone():renderQuizQ(); },1200);
@@ -801,17 +847,18 @@ function quizPick(i,opts,target,btn){
 }
 function renderQuizDone(){
   const qzDone=qz; qz=null;
-  if(qzDone.kind==="sight"||qzDone.kind==="sight-review"||qzDone.kind==="pairs"||qzDone.kind==="level"){
-    const a=adaptGet(); a[qzDone.kind==="sight-review"?"sight":qzDone.kind]=qzDone.miss||0; adaptSet(a);
+  const qk=quizKind(qzDone.kind);
+  if(qk.adaptKey){
+    const a=adaptGet(); a[qk.adaptKey]=qzDone.miss||0; adaptSet(a);
   }
   $("#qzBody").innerHTML=`<div class="qzdone"><div class="big">${qzDone.stars>=4?"🎉":"💪"}</div>
     <h2>You earned ${qzDone.stars} star${qzDone.stars===1?"":"s"}! ⭐</h2>
-    ${["sight","sight-review","pairs","level"].indexOf(qzDone.kind)>=0?'<p class="note">🧠 Smart practice: next round adjusts to you!</p>':""}
+    ${qk.smartNote?'<p class="note">🧠 Smart practice: next round adjusts to you!</p>':""}
     <button class="btn coral" id="qzAgain">🎯 Play again</button>
     <div style="margin-top:10px"><button class="btn ghost" id="qzHome">← 🏠</button></div></div>`;
-  const starWord = qzDone.kind==="sight" ? "sight word star" : (qzDone.kind==="pairs" ? "listening star" : "word star");
+  const starWord = qk.starLabel;
   say(qzDone.stars>=4?`Amazing! You are a ${starWord}!`:"Good trying! Practice makes perfect!");
-  $("#qzAgain").onclick=()=>startQuiz(qzDone.bank,qzDone.kind,qzDone.pairOf);
+  $("#qzAgain").onclick=()=>startQuiz(qzDone.config);
   $("#qzHome").onclick=()=>{ renderHome(); show("s-home"); };
 }
 /* ================= SPEAK (speech production) ================= */
@@ -870,6 +917,7 @@ function speakListen(){
   $("#spkFb").textContent="Listening… 👂"; $("#spkHeard").textContent="";
   rec.lang="en-US"; rec.interimResults=true; rec.maxAlternatives=1;
   rec.onresult=(ev)=>{
+    if(!spk||spk.rec!==rec) return; /* stale session: teardown or nav already happened */
     let interim="",final="";
     for(let i=ev.resultIndex;i<ev.results.length;i++){
       if(ev.results[i].isFinal) final+=ev.results[i][0].transcript;
@@ -879,6 +927,8 @@ function speakListen(){
     if(final) speakHeard(final);
   };
   rec.onerror=(ev)=>{
+    if(ev.error==="aborted") return; /* our own teardown (speakHeard success path), not a real failure */
+    if(!spk||spk.rec!==rec) return;
     stopSpeakRec();
     $("#spkFb").textContent = ev.error==="not-allowed" ? "Microphone is blocked — allow it to play! 🎙️"
       : ev.error==="network" ? "I could not hear you — check internet and try again."
@@ -888,6 +938,7 @@ function speakListen(){
   try{ rec.start(); }catch(e){ stopSpeakRec(); }
 }
 function speakHeard(heard){
+  if(!spk) return; /* user navigated away between final result and this handler */
   stopSpeakRec();
   const target=spk.target, mode=target.word?"words":"sentences";
   $("#spkHeard").textContent="\u201C"+heard+"\u201D";
@@ -961,7 +1012,7 @@ function renderTalk(){
       <div class="center" id="talkFb" style="min-height:26px;font-weight:700"></div></div>
       <div class="center" style="margin-top:10px"><button class="btn ghost" id="talkBack">\u2190 Back to story</button></div>`;
     $("#talkHear").onclick=()=>say(spoken);
-    $("#talkBack").onclick=()=>{ talk=null; renderLevel(); };
+    $("#talkBack").onclick=()=>{ stopTalkRec(); talk=null; renderLevel(); };
     setTimeout(()=>{ if(talk&&talk.cur===p) say(spoken); },400);
     $("#talkOpts").querySelectorAll("button").forEach(b=>b.onclick=()=>talkAnswer(+b.dataset.i));
   }else{
@@ -971,7 +1022,7 @@ function renderTalk(){
       <p class="note">Tell a grown-up your answer, then tap the star! \u2B50</p>
       <button class="btn coral" id="talkStar">\u2B50 Great answer!</button>
       <div class="center" style="margin-top:10px"><button class="btn ghost" id="talkBack">\u2190 Back to story</button></div></div>`;
-    $("#talkBack").onclick=()=>{ talk=null; renderLevel(); };
+    $("#talkBack").onclick=()=>{ stopTalkRec(); talk=null; renderLevel(); };
     setTimeout(()=>{ if(talk&&talk.cur===p) say(p.q); },400);
     $("#talkStar").onclick=()=>{ say("Great talking!"); talkNext(); };
   }
@@ -995,20 +1046,29 @@ function talkAnswer(i){
     $("#talkFb2").innerHTML=`<button class="btn coral" id="talkNext2">Say it to a grown-up! \u2192</button>`;
     $("#talkNext2").onclick=()=>talkNext(); }
 }
+function stopTalkRec(){ if(talk&&talk.rec){ try{talk.rec.abort();}catch(e){} talk.rec=null; talk.listening=false; }
+  const m=$("#talkMic"); if(m){ m.disabled=false; m.classList.remove("live"); } }
 function talkMic(p){
+  if(!talk||talk.listening) return; /* single flight: double-taps can't open two sessions */
   let rec; try{ rec=new SR(); }catch(e){ talkNext(); return; }
-  rec.lang="en-US"; rec.interimResults=false; rec.maxAlternatives=1;
+  talk.listening=true; talk.rec=rec;
+  const mic=$("#talkMic"); if(mic){ mic.disabled=true; mic.classList.add("live"); }
   $("#talkFb2").textContent="Listening... \uD83D\uDC42";
+  rec.lang="en-US"; rec.interimResults=false; rec.maxAlternatives=1;
   rec.onresult=(ev)=>{
+    if(!talk||talk.rec!==rec) return; /* stale after nav/teardown */
+    const fb=$("#talkFb2"); if(!fb) return;
     const heard=ev.results[0][0].transcript;
     const norm=heard.toLowerCase().replace(/[^a-z ]/g," ").replace(/\s+/g," ").trim();
     const hit=norm.split(" ").includes(p.key);
-    $("#talkFb2").textContent=hit?"Great talking! \uD83D\uDDE3\uFE0F\u2B50":"Good talking! \uD83D\uDDE3\uFE0F";
+    stopTalkRec();
+    fb.textContent=hit?"Great talking! \uD83D\uDDE3\uFE0F\u2B50":"Good talking! \uD83D\uDDE3\uFE0F";
     say(hit?"Great talking!":"Good talking!");
-    setTimeout(talkNext,1500);
+    later(1500,talkNext);
   };
-  rec.onerror=()=>{ $("#talkFb2").textContent="Good talking! \uD83D\uDDE3\uFE0F"; setTimeout(talkNext,1200); };
-  try{ rec.start(); }catch(e){ talkNext(); }
+  rec.onerror=()=>{ stopTalkRec(); const fb=$("#talkFb2"); if(fb) fb.textContent="Good talking! \uD83D\uDDE3\uFE0F"; later(1200,talkNext); };
+  rec.onend=()=>{ stopTalkRec(); };
+  try{ rec.start(); }catch(e){ stopTalkRec(); talkNext(); }
 }
 function talkNext(){
   if(!talk) return;
@@ -1019,7 +1079,7 @@ function talkNext(){
       <button class="btn coral" id="talkDone">\u2190 Back to story</button></div>`;
     say("Great talking! You are a super talker!");
     bumpStreak();
-    $("#talkDone").onclick=()=>{ talk=null; renderLevel(); };
+    $("#talkDone").onclick=()=>{ stopTalkRec(); talk=null; renderLevel(); };
   }else renderTalk();
 }
 /* ================= EVENTS ================= */
@@ -1031,7 +1091,7 @@ document.addEventListener("click",e=>{
 });
 $("#backHome").onclick=()=>{ renderHome(); show("s-home"); };
 $("#quizBtn").onclick=()=>{ const b=sightSet===0?SIGHT_WORDS:SIGHT_WORDS.filter(s=>s.set===sightSet);
-  startQuiz(adaptivePool(b,"sight"),"sight"); };
+  startQuiz({bank:adaptivePool(b,"sight"),kind:"sight"}); };
 $("#pairsBtn").onclick=()=>startPairs();
 if(!SR){ const sb=$("#speakBtn"); if(sb){ sb.disabled=true; sb.style.opacity=.5; } $("#speakNote").textContent="Voice input needs Chrome or Edge."; }
 else $("#speakBtn").onclick=()=>startSpeak();
@@ -1057,8 +1117,8 @@ function gateTick(){
 gate.addEventListener("pointerdown",e=>{ e.preventDefault(); gateActive=true; gateStart=performance.now(); gateTick(); });
 gate.addEventListener("contextmenu",e=>e.preventDefault());
 /* ================= PARENT CO-PLAY (transfer outside the app) ================= */
-function togetherGet(){ try{ return JSON.parse(localStorage.getItem("fe_together")||"{}"); }catch(e){ return {}; } }
-function togetherSet(o){ try{ localStorage.setItem("fe_together",JSON.stringify(o)); }catch(e){} }
+function togetherGet(){ return loadJSON("fe_together",{}); }
+function togetherSet(o){ saveJSON("fe_together",o); }
 function togetherData(){
   const s=loadSRS(), out=[];
   Object.keys(s).forEach(w=>{
@@ -1128,9 +1188,17 @@ function renderParentProg(){
 gate.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); gateOpen(); } });
 $("#closeSheet").onclick=()=>$("#sheet").classList.remove("on");
 $("#voiceTest").onclick=()=>say("Hello! The cat sat on the mat.");
-$("#resetProg").onclick=()=>{ if(confirm("Reset all progress?")){ prog={done:[],stars:{}}; save();
-  ["fe_srs","fe_adapt","fe_streak","fe_together"].forEach(k=>{ try{localStorage.removeItem(k);}catch(e){} });
-  streak={count:0,last:""}; renderHome(); $("#sheet").classList.remove("on"); } };
+/* Every localStorage key this app owns. resetAllProgress() clears all of them —
+   add new keys HERE and reset can never go stale again. */
+const FE_KEYS=["fe_prog","fe_streak","fe_srs","fe_adapt","fe_together","fe_grad"];
+function resetAllProgress(){
+  prog={done:[],stars:{}}; streak={count:0,last:""};
+  FE_KEYS.forEach(k=>{ try{localStorage.removeItem(k);}catch(e){} });
+  /* keys stay absent: loadJSON defaults apply on next load, so nothing stale
+     (graduation, SRS, streak) can survive a reset */
+  renderHome(); const sh=$("#sheet"); if(sh) sh.classList.remove("on");
+}
+$("#resetProg").onclick=()=>{ if(confirm("Reset all progress?")) resetAllProgress(); };
 renderHome();
 </script>
 </body>
