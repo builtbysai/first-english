@@ -562,7 +562,7 @@ function renderLevel(){
   setOwl(OWL_SAY[step]);
   ({letters:stepLetters,listen:stepListen,blend:stepBlend,read:stepRead,story:stepStory})[step]();
 }
-function setOwl(text){ $("#owlText").textContent=text; $("#owlSpeak").dataset.say=text; }
+function setOwl(text){ $("#owlText").textContent=text; }
 function stepLetters(){
   const L=LEVELS[cur];
   $("#stepbody").innerHTML = `<div class="lettergrid">`+L.letters.map((c,i)=>
@@ -688,10 +688,17 @@ const MIN_PAIRS=[
  {a:{w:"sock",e:"🧦"},b:{w:"rock",e:"🪨"}},
 ];
 function startPairs(){
-  const pairs=[...MIN_PAIRS].sort(()=>Math.random()-.5).slice(0,6);
+  /* minimal pairs only work as pairs: select whole pairs, due pairs first */
+  const s=loadSRS(), now=Date.now();
+  const score=p=>{ const rs=[p.a.w,p.b.w].map(w=>s[w]);
+    return (rs.some(r=>r&&r.due<=now)?2:0)+(rs.some(r=>!r||!r.h||r.h.length<3)?1:0); };
+  const byScore={};
+  MIN_PAIRS.forEach(p=>{ const sc=score(p); (byScore[sc]=byScore[sc]||[]).push(p); });
+  const pairs=[];
+  [3,2,1,0].forEach(sc=>{ const g=byScore[sc]; if(g) pairs.push(...[...g].sort(()=>Math.random()-.5)); });
   const bank=[], pairOf={};
-  pairs.forEach(p=>{ bank.push(p.a,p.b); pairOf[p.a.w]=p.b.w; pairOf[p.b.w]=p.a.w; });
-  startQuiz(adaptivePool(bank,"pairs"),"pairs",pairOf);
+  pairs.slice(0,3).forEach(p=>{ bank.push(p.a,p.b); pairOf[p.a.w]=p.b.w; pairOf[p.b.w]=p.a.w; });
+  startQuiz(bank,"pairs",pairOf);
 }
 /* ================= SPACED REPETITION (sight words) ================= */
 const SRS_STEPS=[1,4,10,30];
@@ -759,7 +766,8 @@ function renderQuizQ(){
   let others;
   if(qz.pairOf && qz.pairOf[target.w]){
     const partner=qz.bank.find(x=>x.w===qz.pairOf[target.w]);
-    others=[partner,...[...qz.bank].filter(x=>x.w!==target.w&&x!==partner).sort(()=>Math.random()-.5).slice(0,2)];
+    const rest=[...qz.bank].filter(x=>x.w!==target.w&&x!==partner).sort(()=>Math.random()-.5);
+    others=[...(partner?[partner]:[]),...rest].slice(0,3);
   }else{
     others=[...qz.bank].filter(x=>x.w!==target.w).sort(()=>Math.random()-.5).slice(0,3);
   }
@@ -777,7 +785,7 @@ function quizPick(i,opts,target,btn){
   if(btn.classList.contains("right")||!qz) return;
   if(opts[i].w===target.w){
     btn.classList.add("right");
-    if(qz.kind==="sight"||qz.kind==="pairs"||qz.kind==="level") srsRecord(target.w, qz.firstTry);
+    if(qz.kind==="sight"||qz.kind==="sight-review"||qz.kind==="pairs"||qz.kind==="level") srsRecord(target.w, qz.firstTry);
     if(qz.firstTry){ qz.stars++; } else { qz.miss=(qz.miss||0)+1; }
     say("Yes! "+target.w+".");
     setTimeout(()=>{ if(!qz) return; qz.idx++; qz.firstTry=true; qz.idx>=qz.pool.length?renderQuizDone():renderQuizQ(); },1200);
@@ -793,17 +801,17 @@ function quizPick(i,opts,target,btn){
 }
 function renderQuizDone(){
   const qzDone=qz; qz=null;
-  if(qzDone.kind==="sight"||qzDone.kind==="pairs"||qzDone.kind==="level"){
-    const a=adaptGet(); a[qzDone.kind]=qzDone.miss||0; adaptSet(a);
+  if(qzDone.kind==="sight"||qzDone.kind==="sight-review"||qzDone.kind==="pairs"||qzDone.kind==="level"){
+    const a=adaptGet(); a[qzDone.kind==="sight-review"?"sight":qzDone.kind]=qzDone.miss||0; adaptSet(a);
   }
   $("#qzBody").innerHTML=`<div class="qzdone"><div class="big">${qzDone.stars>=4?"🎉":"💪"}</div>
     <h2>You earned ${qzDone.stars} star${qzDone.stars===1?"":"s"}! ⭐</h2>
-    ${["sight","pairs","level"].indexOf(qzDone.kind)>=0?'<p class="note">🧠 Smart practice: next round adjusts to you!</p>':""}
+    ${["sight","sight-review","pairs","level"].indexOf(qzDone.kind)>=0?'<p class="note">🧠 Smart practice: next round adjusts to you!</p>':""}
     <button class="btn coral" id="qzAgain">🎯 Play again</button>
     <div style="margin-top:10px"><button class="btn ghost" id="qzHome">← 🏠</button></div></div>`;
   const starWord = qzDone.kind==="sight" ? "sight word star" : (qzDone.kind==="pairs" ? "listening star" : "word star");
   say(qzDone.stars>=4?`Amazing! You are a ${starWord}!`:"Good trying! Practice makes perfect!");
-  $("#qzAgain").onclick=()=>startQuiz(qzDone.bank,qzDone.kind);
+  $("#qzAgain").onclick=()=>startQuiz(qzDone.bank,qzDone.kind,qzDone.pairOf);
   $("#qzHome").onclick=()=>{ renderHome(); show("s-home"); };
 }
 /* ================= SPEAK (speech production) ================= */
@@ -1120,7 +1128,9 @@ function renderParentProg(){
 gate.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); gateOpen(); } });
 $("#closeSheet").onclick=()=>$("#sheet").classList.remove("on");
 $("#voiceTest").onclick=()=>say("Hello! The cat sat on the mat.");
-$("#resetProg").onclick=()=>{ if(confirm("Reset all progress?")){ prog={done:[],stars:{}}; save(); renderHome(); $("#sheet").classList.remove("on"); } };
+$("#resetProg").onclick=()=>{ if(confirm("Reset all progress?")){ prog={done:[],stars:{}}; save();
+  ["fe_srs","fe_adapt","fe_streak","fe_together"].forEach(k=>{ try{localStorage.removeItem(k);}catch(e){} });
+  streak={count:0,last:""}; renderHome(); $("#sheet").classList.remove("on"); } };
 renderHome();
 </script>
 </body>

@@ -1,5 +1,5 @@
 /* Offline support: cache-first, network refreshes the cache. Bump CACHE to force an update. */
-const CACHE = 'first-english-v2';
+const CACHE = 'first-english-v3';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
