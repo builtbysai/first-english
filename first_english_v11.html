@@ -177,13 +177,16 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
     <div class="owlrow"><div class="owl">🦉</div>
       <div class="bubble"><button class="spk" data-say="Hello! I am Ollie. Tap a picture to start.">🔊</button>
       <span id="owlHome">Hello! I'm Ollie 🦉 Tap a level to begin.</span></div></div>
+    <div class="card" id="dueCard" style="display:none"><h2>🔁 Tricky words</h2>
+      <p class="note" style="margin:4px 0 0">Words that need another look — a quick review makes them stick.</p>
+      <div class="center" style="margin-top:12px"><button class="btn gold" id="dueBtn"></button></div>
+    </div>
     <div class="lvlgrid" id="lvlgrid"></div>
     <div class="card sightcard"><h2>👁️ Sight words</h2>
       <p class="note" style="margin:4px 0 0">Words to know by heart — tap to hear them.</p>
       <div class="setpills" id="setpills"></div>
       <div class="sightgrid" id="sightgrid"></div>
-      <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn">🎯 Quiz me</button>
-        <span id="reviewWrap"></span></div>
+      <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn">🎯 Quiz me</button></div>
     </div>
     <div class="card"><h2>🎙️ Say it</h2>
       <p class="note" style="margin:4px 0 0">Say words and sentences out loud!</p>
@@ -590,8 +593,13 @@ function renderHome(){
   $("#sightgrid").innerHTML = vis.map(s=>
     `<button class="sw" data-say="${s.w}">${s.e?`<span class="swe">${s.e}</span>`:""}<span class="sww">${s.w}</span></button>`).join("");
   const due=srsDue();
-  $("#reviewWrap").innerHTML = due.length?` <button class="btn ghost" id="reviewBtn">🔁 Review ${due.length}</button>`:"";
-  const rb=$("#reviewBtn"); if(rb) rb.onclick=()=>startQuiz({bank:due.slice(0,10),kind:"sight-review"});
+  const dc=$("#dueCard");
+  if(due.length){
+    dc.style.display="";
+    const db=$("#dueBtn");
+    db.textContent=`🔁 Review ${due.length} word${due.length===1?"":"s"}`;
+    db.onclick=()=>startQuiz({bank:due.slice(0,10),kind:"review"});
+  } else dc.style.display="none";
 }
 function openLevel(i){ cur=i; step="letters"; renderLevel(); show("s-level"); }
 function renderLevel(){
@@ -634,9 +642,10 @@ function gameRound(kind){
       <div class="center note" style="margin-top:10px">${idx+1} / ${words.length}</div>`;
     const play=()=>say(target.w);
     $("#rwSay").onclick=play; later(500,play);
+    let firstTry=true; /* per-word outcome feeds the SRS, same contract as quizPick */
     body.querySelectorAll(".choice").forEach(ch=>ch.onclick=()=>{
-      if(ch.dataset.w===target.w){ ch.classList.add("right"); ok++; say("Yes! "+target.w,false); later(900,()=>{idx++;round();}); }
-      else { ch.classList.add("wrong"); say("Try again"); later(450,()=>ch.classList.remove("wrong")); }
+      if(ch.dataset.w===target.w){ ch.classList.add("right"); ok++; srsRecord(target.w,firstTry); say("Yes! "+target.w,false); later(900,()=>{idx++;round();}); }
+      else { ch.classList.add("wrong"); firstTry=false; say("Try again"); later(450,()=>ch.classList.remove("wrong")); }
     });
   }
   function finish(){
@@ -790,8 +799,14 @@ function adaptivePool(bank,kind){
   return pool.slice(0,6);
 }
 function srsDue(){
-  const s=loadSRS(), now=Date.now();
-  return SIGHT_WORDS.filter(w=>{ const r=s[w.w]; return r&&r.due<=now; });
+  /* every bank with SRS recording drains through this one list: sight words
+     plus all level words, deduped. Recording without a review path is data loss. */
+  const s=loadSRS(), now=Date.now(), seen={};
+  const all=[];
+  const add=w=>{ if(w&&w.w&&!seen[w.w]){ seen[w.w]=1; all.push(w); } };
+  SIGHT_WORDS.forEach(add);
+  LEVELS.forEach(L=>(L.words||[]).forEach(add));
+  return all.filter(w=>{ const r=s[w.w]; return r&&r.due<=now; });
 }
 /* ================= LISTENING QUIZ ================= */
 /* Quiz-kind registry: every behavior that varies by quiz kind (SRS recording,
@@ -799,9 +814,9 @@ function srsDue(){
    this table. Adding a new kind can never silently miss a behavior again. */
 const QUIZ_KINDS={
   "sight":       {srs:true, adaptKey:"sight", starLabel:"sight word star", smartNote:true},
-  "sight-review":{srs:true, adaptKey:"sight", starLabel:"sight word star", smartNote:true},
   "pairs":       {srs:true, adaptKey:"pairs", starLabel:"listening star",  smartNote:true},
   "level":       {srs:true, adaptKey:"level", starLabel:"word star",       smartNote:true},
+  "review":      {srs:true, adaptKey:"review",starLabel:"word star",       smartNote:true},
 };
 function quizKind(k){ return QUIZ_KINDS[k]||{srs:false,adaptKey:null,starLabel:"word star",smartNote:false}; }
 let qz=null;
