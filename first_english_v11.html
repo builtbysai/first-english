@@ -14,6 +14,9 @@
   --cream:#fff8ee; --paper:#fffdf8; --ink:#33302a; --muted:#8a8474;
   --coral:#ff6f61; --teal:#1f9e8e; --sun:#ffc93c; --sky:#7ec8e3; --lilac:#b388eb;
   --radius:24px; --shadow:0 4px 18px rgba(51,48,42,.10);
+  /* single content-column width shared by main, hero content, and floating
+     buttons, so the layout stays aligned at every viewport width */
+  --colw:720px;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 body{margin:0; background:var(--cream); color:var(--ink);
@@ -21,9 +24,12 @@ body{margin:0; background:var(--cream); color:var(--ink);
   min-height:100vh; padding-bottom:40px;}
 header.hero{background:linear-gradient(160deg,#ff9a8b,#ff6f61 55%,#f8574a); color:#fff;
   padding:26px 20px 30px; border-radius:0 0 34px 34px; text-align:center; box-shadow:var(--shadow);}
+header.hero .heroin{max-width:var(--colw); margin:0 auto; padding:0 14px;}
 header.hero h1{margin:0; font-size:30px; letter-spacing:.5px;}
 header.hero p{margin:6px 0 0; font-size:15px; opacity:.95;}
-main{max-width:720px; margin:0 auto; padding:18px 14px;}
+main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
+/* wide screens: let the column breathe instead of stranding content mid-page */
+@media(min-width:1100px){ :root{ --colw:980px; } }
 .screen{display:none;} .screen.on{display:block; animation:pop .3s ease;}
 @keyframes pop{from{opacity:0; transform:translateY(10px) scale(.99);} to{opacity:1; transform:none;}}
 .owlrow{display:flex; align-items:flex-end; gap:10px; margin:6px 2px 14px;}
@@ -128,11 +134,11 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
   box-shadow:var(--shadow); cursor:pointer; font-size:15px; color:var(--muted);}
 .together{background:#f6f4ff;border:2px solid #c9bdf5;border-radius:14px;padding:12px}
 .tchip{display:inline-block;background:#fff;border:2px solid #7c6bd6;border-radius:999px;padding:3px 12px;margin:2px;font-weight:800;color:#4a3d9e}
-.gate{position:fixed; top:14px; right:14px; z-index:60; border:0; --p:0;
+.gate{position:fixed; top:14px; right:max(14px, calc((100vw - var(--colw))/2 + 14px)); z-index:60; border:0; --p:0;
   background:conic-gradient(#7c6bd6 calc(var(--p)*1%), rgba(255,255,255,.85) 0);
   border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:var(--shadow);
   touch-action:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none;}
-.gatehint{position:fixed; top:66px; right:10px; z-index:80; background:#33302a; color:#fff; font-size:13px;
+.gatehint{position:fixed; top:66px; right:max(10px, calc((100vw - var(--colw))/2 + 10px)); z-index:80; background:#33302a; color:#fff; font-size:13px;
   padding:8px 12px; border-radius:10px; opacity:0; transform:translateY(-4px);
   transition:opacity .25s, transform .25s; pointer-events:none; max-width:230px; text-align:center;}
 .gatehint.on{opacity:1; transform:none;}
@@ -166,7 +172,7 @@ main{max-width:720px; margin:0 auto; padding:18px 14px;}
 
 <!-- HOME: level map -->
 <div class="screen on" id="s-home">
-  <header class="hero"><h1>🌱 First English</h1><p>from your first sound to your first story</p></header>
+  <header class="hero"><div class="heroin"><h1>🌱 First English</h1><p>from your first sound to your first story</p></div></header>
   <main>
     <div class="owlrow"><div class="owl">🦉</div>
       <div class="bubble"><button class="spk" data-say="Hello! I am Ollie. Tap a picture to start.">🔊</button>
