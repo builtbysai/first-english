@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});}</script>
-<title>First English — from your first sound to your first story</title>
+<title>First English: from your first sound to your first story</title>
 <style>
 :root{
   --cream:#fff8ee; --paper:#fffdf8; --ink:#33302a; --muted:#8a8474;
@@ -180,12 +180,12 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
       <div class="bubble"><button class="spk" data-say="Hello! I am Ollie. Tap a picture to start.">🔊</button>
       <span id="owlHome">Hello! I'm Ollie 🦉 Tap a level to begin.</span></div></div>
     <div class="card" id="dueCard" style="display:none"><h2>🔁 Tricky words</h2>
-      <p class="note" style="margin:4px 0 0">Words that need another look — a quick review makes them stick.</p>
+      <p class="note" style="margin:4px 0 0">Words that need another look. A quick review makes them stick.</p>
       <div class="center" style="margin-top:12px"><button class="btn gold" id="dueBtn"></button></div>
     </div>
     <div class="lvlgrid" id="lvlgrid"></div>
     <div class="card sightcard"><h2>👁️ Sight words</h2>
-      <p class="note" style="margin:4px 0 0">Words to know by heart — tap to hear them.</p>
+      <p class="note" style="margin:4px 0 0">Words to know by heart. Tap to hear them.</p>
       <div class="setpills" id="setpills"></div>
       <div class="sightgrid" id="sightgrid"></div>
       <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn">🎯 Quiz me</button></div>
@@ -196,7 +196,7 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
       <div class="center"><span class="note" id="speakNote"></span></div>
     </div>
     <div class="card"><h2>👂 Sound pairs</h2>
-      <p class="note" style="margin:4px 0 0">Hear the tiny difference — <i>ship</i> or <i>sheep</i>?</p>
+      <p class="note" style="margin:4px 0 0">Hear the tiny difference: <i>ship</i> or <i>sheep</i>?</p>
       <div class="center" style="margin-top:12px"><button class="btn coral" id="pairsBtn">👂 Play sound pairs</button></div>
     </div>
     <div class="center"><span class="streak" id="streak">🔥 0 day streak</span></div>
@@ -237,14 +237,14 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
 <!-- graduation -->
 <div id="grad"><div class="gradin"><div class="big">🎓🦉🎉</div>
   <h2>You did it!</h2>
-  <p>You finished all 9 levels — from your first sound to your first stories. Ollie is so proud of you!</p>
+  <p>You finished all 9 levels, from your first sound to your first stories. Ollie is so proud of you!</p>
   <button class="btn coral" id="gradOk">🌟 Keep reading!</button></div></div>
 
 <!-- parent gate sheet -->
 <div class="sheet" id="sheet"><div class="sheetin">
   <h2>⚙️ Grown-ups</h2>
-  <p><b>How this works:</b> letters are taught in the order <i>s a t i p n …</i> (the Jolly Phonics sequence used in schools worldwide), because those six letters already make real words like <i>sat</i> and <i>pin</i>. Letter <b>sounds</b> come before letter names. Every word can be sounded out with letters already learned — no guessing.</p>
-  <p><b>Sound:</b> this app speaks with your device's voice (rate slowed for learners). For the pure letter sounds (ssss, not "ess"), please model them yourself — exaggerated and clipped, no added vowel ("mmm" not "muh").</p>
+  <p><b>How this works:</b> letters are taught in the order <i>s a t i p n …</i> (the Jolly Phonics sequence used in schools worldwide), because those six letters already make real words like <i>sat</i> and <i>pin</i>. Letter <b>sounds</b> come before letter names. Every word can be sounded out with letters already learned. No guessing.</p>
+  <p><b>Sound:</b> this app speaks with your device's voice (rate slowed for learners). For the pure letter sounds (ssss, not "ess"), please model them yourself: exaggerated and clipped, no added vowel ("mmm" not "muh").</p>
   <p><b>Pace:</b> one level ≈ 5 minutes. Short daily sessions beat long ones. 🌟</p>
   <h3 style="margin:18px 0 8px">📊 Progress</h3>
   <div id="parentProg"></div>
@@ -421,7 +421,7 @@ const SIGHT_WORDS=[
   {w:"jump",e:"🦘",set:4},
   {w:"big",e:"🐘",set:4},
   {w:"day",e:"☀️",set:4},
-  {w:"get",e:"📦",set:4},
+  {w:"get",e:"🎁",set:4},
   {w:"has",e:"✊",set:4},
   {w:"him",e:"👦",set:4},
   {w:"how",e:"❓",set:4},
@@ -683,7 +683,6 @@ function stepBlend(){
     const t=words[idx];
     const taughtGraphs=L.letters.filter(c=>c.l.length>1).map(c=>c.l.toLowerCase());
     body.innerHTML=`<div class="center" style="font-size:64px;margin:6px 0">${t.e}</div>
-      <div class="tiles" id="tiles">`+segWord(t.w,taughtGraphs).map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
       <div class="tiles" id="tiles">`+segWord(t.w,taughtGraphs).map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
       <div class="center"><button class="btn" id="sayWord">🔊 ${t.w}</button></div>
       <div class="center note" style="margin-top:8px">Tap each letter left to right 👉</div>
@@ -1051,9 +1050,9 @@ function speakListen(){
     if(ev.error==="aborted") return; /* our own teardown (speakHeard success path), not a real failure */
     if(!spk||spk.rec!==rec) return;
     stopSpeakRec();
-    $("#spkFb").textContent = ev.error==="not-allowed" ? "Microphone is blocked — allow it to play! 🎙️"
-      : ev.error==="network" ? "I could not hear you — check internet and try again."
-      : "I did not catch that — try again!";
+    $("#spkFb").textContent = ev.error==="not-allowed" ? "Microphone is blocked. Allow it to play! 🎙️"
+      : ev.error==="network" ? "I could not hear you. Check your internet and try again."
+      : "I did not catch that. Try again!";
   };
   rec.onend=()=>{ if(spk) { spk.listening=false; const m=$("#spkMic"); if(m) m.classList.remove("live"); } };
   try{ rec.start(); }catch(e){ stopSpeakRec(); }
@@ -1309,15 +1308,16 @@ function renderParentProg(){
 gate.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); gateOpen(); } });
 $("#closeSheet").onclick=()=>$("#sheet").classList.remove("on");
 $("#voiceTest").onclick=()=>say("Hello! The cat sat on the mat.");
-/* Every localStorage key this app owns. resetAllProgress() clears all of them —
-   add new keys HERE and reset can never go stale again. */
+/* Every localStorage key this app owns. resetAllProgress() clears all of them.
+   Add new keys HERE and reset can never go stale again. */
 const FE_KEYS=["fe_prog","fe_streak","fe_srs","fe_adapt","fe_together","fe_grad"];
 function resetAllProgress(){
   prog={done:[],stars:{}}; streak={count:0,last:""};
   FE_KEYS.forEach(k=>{ try{localStorage.removeItem(k);}catch(e){} });
   /* keys stay absent: loadJSON defaults apply on next load, so nothing stale
      (graduation, SRS, streak) can survive a reset */
-  renderHome(); const sh=$("#sheet"); if(sh) sh.classList.remove("on");
+  renderHome(); show("s-home"); /* back to a fresh home: no stale step screen underneath */
+  const sh=$("#sheet"); if(sh) sh.classList.remove("on");
 }
 $("#resetProg").onclick=()=>{ if(confirm("Reset all progress?")) resetAllProgress(); };
 renderHome();
