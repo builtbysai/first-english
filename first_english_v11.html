@@ -88,6 +88,7 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
 .stab.on{color:#fff;}
 .stab.on.s1{background:var(--coral);} .stab.on.s2{background:var(--teal);}
 .stab.on.s3{background:#e8a100;} .stab.on.s4{background:var(--lilac);}
+.stab.on.s5{background:#4da6ff;}
 .lettergrid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
 .lcard{background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:16px 8px; text-align:center; cursor:pointer; border:0; font:inherit;}
 .lcard:active{transform:scale(.95);}
@@ -113,6 +114,7 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
   font-size:36px; font-weight:900; display:flex; align-items:center; justify-content:center; cursor:pointer;
   box-shadow:var(--shadow); border:0;}
 .tile.lit{background:var(--teal); transform:scale(1.08);}
+.tile.used{opacity:0.25; transform:scale(0.95);}
 .story{background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:18px; margin:0 0 12px;
   display:flex; align-items:center; gap:14px;}
 .story .se{font-size:48px;}
@@ -466,6 +468,7 @@ const STEP_DEFS = [
   {id:"listen", icon:"👂", label:"Listen"},
   {id:"blend", icon:"🧩", label:"Build"},
   {id:"read", icon:"📖", label:"Read"},
+  {id:"write", icon:"✏️", label:"Write"},
   {id:"story", icon:"📚", label:"Story"},
 ];
 /* split a word into its sound units (digraphs stay together): rain -> [r,ai,n] */
@@ -488,6 +491,7 @@ const OWL_SAY = {
   listen:"Listen… then tap the picture you hear.",
   blend:"Tap the letters, left to right. Then read the word!",
   read:"Read the word… then tap the matching picture.",
+  write:"Hear the word… then spell it with the tiles!",
   story:"You can read a whole story now! Tap 🔊 to hear it.",
 };
 /* ================= STATE ================= */
@@ -606,9 +610,9 @@ function renderLevel(){
   screenSeq++; /* new step: stale timers from the previous step die */
   const L=LEVELS[cur];
   $("#steptabs").innerHTML = STEP_DEFS.map(s=>
-    `<button class="stab ${step===s.id?"on "+({letters:"s1",listen:"s2",blend:"s3",read:"s4",story:"s4"}[s.id]):""}" data-step="${s.id}">${s.icon} ${s.label}</button>`).join("");
+    `<button class="stab ${step===s.id?"on "+({letters:"s1",listen:"s2",blend:"s3",read:"s4",write:"s5",story:"s4"}[s.id]):""}" data-step="${s.id}">${s.icon} ${s.label}</button>`).join("");
   setOwl(OWL_SAY[step]);
-  ({letters:stepLetters,listen:stepListen,blend:stepBlend,read:stepRead,story:stepStory})[step]();
+  ({letters:stepLetters,listen:stepListen,blend:stepBlend,read:stepRead,write:stepWrite,story:stepStory})[step]();
 }
 function setOwl(text){ $("#owlText").textContent=text; }
 function stepLetters(){
@@ -656,10 +660,10 @@ function gameRound(kind){
     body.innerHTML=`<div class="card starscreen"><div class="big">${"⭐".repeat(stars)}</div>
       <h2>${["","Great!","Wonderful!","Amazing!"][stars]}</h2>
       <p style="color:var(--muted)">${ok} of ${words.length} correct</p>
-      <button class="btn coral" id="goNext">${kind==="listen"?"Next: Build 🧩":"Next: Story 📚"}</button>
+      <button class="btn coral" id="goNext">${kind==="listen"?"Next: Build 🧩":(kind==="read"?"Next: Write ✏️":"Next: Story 📚")}</button>
       <div><button class="btn ghost" id="goHome2">🏠 Levels</button></div></div>`;
     say(["","Great!","Wonderful!","Amazing!"][stars]);
-    $("#goNext").onclick=()=>{ step = kind==="listen"?"blend":"story"; renderLevel(); };
+    $("#goNext").onclick=()=>{ step = kind==="listen"?"blend":(kind==="read"?"write":"story"); renderLevel(); };
     $("#goHome2").onclick=()=>{ renderHome(); show("s-home"); };
   }
   round();
@@ -680,6 +684,7 @@ function stepBlend(){
     const taughtGraphs=L.letters.filter(c=>c.l.length>1).map(c=>c.l.toLowerCase());
     body.innerHTML=`<div class="center" style="font-size:64px;margin:6px 0">${t.e}</div>
       <div class="tiles" id="tiles">`+segWord(t.w,taughtGraphs).map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
+      <div class="tiles" id="tiles">`+segWord(t.w,taughtGraphs).map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
       <div class="center"><button class="btn" id="sayWord">🔊 ${t.w}</button></div>
       <div class="center note" style="margin-top:8px">Tap each letter left to right 👉</div>
       <div class="center note">${idx+1} / ${words.length}</div>`;
@@ -697,6 +702,101 @@ function stepBlend(){
       }
     });
     $("#sayWord").onclick=()=>say(t.w);
+    later(600,()=>say(t.w));
+  }
+  round();
+}
+function stepWrite(){
+  /* Encoding: hear the word, spell it from scrambled grapheme tiles.
+     Research: structured spelling/writing practice (IES/WWC; NRP spelling
+     benefits). Misspellings feed the same SRS as other steps. */
+  const L=LEVELS[cur];
+  const words=[...L.words].sort(()=>Math.random()-.5).slice(0,4);
+  let idx=0; const body=$("#stepbody");
+  function round(){
+    if(idx>=words.length){
+      body.innerHTML=`<div class="card starscreen"><div class="big">✏️</div><h2>You spelled ${words.length} words!</h2>
+        <button class="btn coral" id="goStory">Next: Story 📚</button></div>`;
+      $("#goStory").onclick=()=>{ step="story"; renderLevel(); }; return;
+    }
+    const t=words[idx];
+    window._writeT=t.w; /* test hook: current spelling target (qa harness) */
+    const taughtGraphs=L.letters.filter(c=>c.l.length>1).map(c=>c.l.toLowerCase());
+    const segs=segWord(t.w,taughtGraphs);
+    /* scrambled tile order: the child must recall the spelling, not copy order.
+       Reshuffle if the shuffle accidentally left tiles in correct order. */
+    let scrambled=[...segs].sort(()=>Math.random()-.5);
+    for(let r=0; r<10 && scrambled.join("").toLowerCase()===t.w.toLowerCase(); r++){
+      scrambled=[...segs].sort(()=>Math.random()-.5);
+    }
+    const picked=[]; let firstTry=true; let done=false;
+    body.innerHTML=`<div class="center" style="font-size:64px;margin:6px 0">${t.e}</div>
+      <div class="center"><button class="btn" id="hearWord">🔊 Hear the word</button></div>
+      <div class="center" style="margin:12px 0;min-height:52px"><div class="tiles" id="answer"></div></div>
+      <div class="tiles" id="tiles">`+scrambled.map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
+      <div class="center" style="margin-top:10px">
+        <button class="btn ghost" id="undoTile">↩ Undo</button>
+        <button class="btn coral" id="checkSpell">Check ✓</button>
+      </div>
+      <div class="center" id="spellFb" style="min-height:26px;font-weight:700"></div>
+      <div class="center note">${idx+1} / ${words.length}</div>`;
+    const tiles=[...body.querySelectorAll("#tiles .tile")];
+    const answer=$("#answer"), fb=$("#spellFb");
+    function renderAnswer(){
+      answer.innerHTML=picked.map((p,i)=>`<button class="tile lit" data-i="${i}">${p}</button>`).join("");
+      answer.querySelectorAll(".tile").forEach(b=>b.onclick=()=>{
+        /* tap a picked tile to remove it (and restore the bank tile) */
+        const pi=+b.dataset.i, seg=picked.splice(pi,1)[0];
+        const bank=tiles.find(x=>x.textContent===seg&&x.classList.contains("used"));
+        if(bank) bank.classList.remove("used");
+        renderAnswer();
+      });
+    }
+    tiles.forEach(tb=>tb.onclick=()=>{
+      if(done||tb.classList.contains("used")) return;
+      tb.classList.add("used");
+      picked.push(tb.textContent);
+      say(tb.textContent);
+      renderAnswer();
+    });
+    $("#undoTile").onclick=()=>{
+      if(done||!picked.length) return;
+      const seg=picked.pop();
+      /* restore the most recently used matching bank tile */
+      for(let i=tiles.length-1;i>=0;i--){
+        if(tiles[i].classList.contains("used")&&tiles[i].textContent===seg){ tiles[i].classList.remove("used"); break; }
+      }
+      renderAnswer();
+    };
+    $("#hearWord").onclick=()=>say(t.w);
+    $("#checkSpell").onclick=()=>{
+      if(done) return;
+      const attempt=picked.join("").toLowerCase();
+      if(attempt===t.w.toLowerCase()){
+        done=true;
+        fb.textContent="⭐ Yes! "+t.w;
+        fb.style.color="var(--gold)";
+        say("Yes! "+t.w);
+        srsRecord(t.w,firstTry);
+        later(1200,()=>{ idx++; round(); });
+      }else{
+        firstTry=false;
+        fb.textContent="Try again! Tap 🔊 to hear it.";
+        fb.style.color="var(--coral)";
+        say("Try again. "+t.w);
+        /* after two failed attempts, show the spelling as a model */
+        if(fb.dataset.tries==="1"){
+          done=true;
+          fb.textContent="This word is spelled: "+segs.join("-");
+          fb.style.color="var(--teal)";
+          say(t.w);
+          srsRecord(t.w,false);
+          later(2200,()=>{ idx++; round(); });
+        }else{
+          fb.dataset.tries="1";
+        }
+      }
+    };
     later(600,()=>say(t.w));
   }
   round();
