@@ -498,7 +498,8 @@ const OWL_SAY = {
 /* Single safe reader for every JSON key: corrupt storage can never blank the app. */
 function loadJSON(key,fb){ try{ const v=JSON.parse(localStorage.getItem(key)); return (v&&typeof v==="object")?v:fb; }catch(e){ return fb; } }
 function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
-let prog = loadJSON("fe_prog",{"done":[],"stars":{}});
+let prog = loadJSON("fe_prog",{"done":[],"stars":{},"steps":{}});
+if(!prog.steps||typeof prog.steps!=="object") prog.steps={}; /* old saves predate step tracking */
 let streak = loadJSON("fe_streak",{"count":0,"last":""});
 let cur = 0, step = "letters";
 const $ = s=>document.querySelector(s);
@@ -655,7 +656,10 @@ function gameRound(kind){
   function finish(){
     const stars = ok>=5?3:(ok>=4?2:1);
     prog.stars[cur]=Math.max(prog.stars[cur]||0,stars);
-    if(!prog.done.includes(cur)) prog.done.push(cur);
+    /* Honest progress: finishing a round completes that STEP, never the whole level.
+       The level counts only when Listen+Build+Read+Write are all done and the
+       child taps "I did it!" in Story. (v28) */
+    (prog.steps[cur]=prog.steps[cur]||{})[kind]=true;
     save(); bumpStreak();
     body.innerHTML=`<div class="card starscreen"><div class="big">${"⭐".repeat(stars)}</div>
       <h2>${["","Great!","Wonderful!","Amazing!"][stars]}</h2>
@@ -676,6 +680,7 @@ function stepBlend(){
   let idx=0; const body=$("#stepbody");
   function round(){
     if(idx>=words.length){
+      (prog.steps[cur]=prog.steps[cur]||{}).blend=true; save(); bumpStreak();
       body.innerHTML=`<div class="card starscreen"><div class="big">🧩</div><h2>You built ${words.length} words!</h2>
         <button class="btn coral" id="goRead">Next: Read 📖</button></div>`;
       $("#goRead").onclick=()=>{ step="read"; renderLevel(); }; return;
@@ -714,6 +719,7 @@ function stepWrite(){
   let idx=0; const body=$("#stepbody");
   function round(){
     if(idx>=words.length){
+      (prog.steps[cur]=prog.steps[cur]||{}).write=true; save(); bumpStreak();
       body.innerHTML=`<div class="card starscreen"><div class="big">✏️</div><h2>You spelled ${words.length} words!</h2>
         <button class="btn coral" id="goStory">Next: Story 📚</button></div>`;
       $("#goStory").onclick=()=>{ step="story"; renderLevel(); }; return;
@@ -807,12 +813,24 @@ function stepStory(){
      <button class="spk" data-si="${i}">🔊</button></div>`).join("")
     + `<div class="center" style="margin-top:14px"><button class="btn gold" id="talkBtn">💬 Let's talk about it!</button></div>`
     + `<div class="center" style="margin-top:10px"><button class="btn coral" id="finishLvl">⭐ I did it!</button></div>`
+    + `<div class="center note" id="lvlNote" style="min-height:22px;margin-top:6px"></div>`
     + `<div class="center" style="margin-top:10px"><button class="btn ghost" id="lvlQuiz">🎯 Quiz me on these words</button></div>`;
   $("#stepbody").querySelectorAll(".spk").forEach(b=>b.onclick=()=>say(L.story[+b.dataset.si].t));
   setTimeout(()=>say(L.story[0].t),700);
   $("#finishLvl").onclick=()=>{
+    /* The level counts only when the child really did the work: every one of the
+       four practice steps must be finished before "I did it!" can complete the level.
+       Stars were already earned in the Listen/Read rounds; the button grants none. */
+    const NEED={listen:"👂 Listen",blend:"🧩 Build",read:"📖 Read",write:"✏️ Write"};
+    const have=prog.steps[cur]||{};
+    const missing=Object.keys(NEED).filter(k=>!have[k]);
+    if(missing.length){
+      $("#lvlNote").textContent="Almost there! Finish first: "+missing.map(k=>NEED[k]).join(", ");
+      say("Almost there! Finish "+missing.join(" and ")+" first.");
+      return;
+    }
     if(!prog.done.includes(cur)) prog.done.push(cur);
-    prog.stars[cur]=Math.max(prog.stars[cur]||0,3); save(); bumpStreak(); renderHome();
+    save(); bumpStreak(); renderHome();
     show("s-home"); say("Amazing! You read a story!");
     const allDone = LEVELS.every((L,i)=>prog.done.includes(i));
     if(allDone && !localStorage.getItem("fe_grad")){
@@ -1291,7 +1309,11 @@ function renderParentProg(){
   const rows = LEVELS.map((L,i)=>{
     const st = prog.stars[i]||0;
     const done = prog.done.includes(i);
-    return `<div class="prow"><span><b>Level ${i+1}</b> <span class="pnote">${L.desc}</span></span><span class="pstars">${done?"⭐".repeat(st)+"☆".repeat(Math.max(0,3-st)):"🔒"}</span></div>`;
+    /* per-step progress for the parent: which practice steps the child has finished */
+    const have = (prog.steps&&prog.steps[i])||{};
+    const bits = [["listen","👂"],["blend","🧩"],["read","📖"],["write","✏️"]]
+      .map(([k,ic])=>ic+(have[k]?"✓":"·")).join(" ");
+    return `<div class="prow"><span><b>Level ${i+1}</b> <span class="pnote">${L.desc}</span>${done?"":`<br><span class="pnote">${bits}</span>`}</span><span class="pstars">${done?"⭐".repeat(st)+"☆".repeat(Math.max(0,3-st)):"🔒"}</span></div>`;
   }).join("");
   const grad = localStorage.getItem("fe_grad") ? `<div class="pgrad">🎓 All 9 levels complete!</div>` : "";
   $("#parentProg").innerHTML = `<div class="pgrid">${rows}</div>${grad}
@@ -1312,7 +1334,7 @@ $("#voiceTest").onclick=()=>say("Hello! The cat sat on the mat.");
    Add new keys HERE and reset can never go stale again. */
 const FE_KEYS=["fe_prog","fe_streak","fe_srs","fe_adapt","fe_together","fe_grad"];
 function resetAllProgress(){
-  prog={done:[],stars:{}}; streak={count:0,last:""};
+  prog={done:[],stars:{},steps:{}}; streak={count:0,last:""};
   FE_KEYS.forEach(k=>{ try{localStorage.removeItem(k);}catch(e){} });
   /* keys stay absent: loadJSON defaults apply on next load, so nothing stale
      (graduation, SRS, streak) can survive a reset */
