@@ -642,14 +642,22 @@ function gameRound(kind){
     opts.sort(()=>Math.random()-.5);
     body.innerHTML = (kind==="read"
       ? `<div class="bigword"><div class="w">${target.w}</div><button class="spk" id="rwSay">🔊 hear it</button></div>`
-      : `<div class="bigword"><button class="spk" id="rwSay" style="font-size:26px">🔊 ${target.w}</button></div>`)
+      : `<div class="bigword"><button class="spk" id="rwSay" style="font-size:26px">🔊</button></div>
+         <div class="center note">Tap 🔊 to hear the word</div>`)
       + `<div class="choices">`+opts.map(o=>`<button class="choice" data-w="${o.w}">${o.e}</button>`).join("")+`</div>
       <div class="center note" style="margin-top:10px">${idx+1} / ${words.length}</div>`;
+    /* Listen is audio-first: the written word stays off the hear button so the
+       child must match the SOUND to the picture, not read the label. It is
+       revealed as a reward after a correct tap (sound -> spelling link). */
+    window._listenT = (kind==="listen") ? target.w : "";
     const play=()=>say(target.w);
     $("#rwSay").onclick=play; later(500,play);
     let firstTry=true; /* per-word outcome feeds the SRS, same contract as quizPick */
     body.querySelectorAll(".choice").forEach(ch=>ch.onclick=()=>{
-      if(ch.dataset.w===target.w){ ch.classList.add("right"); ok++; srsRecord(target.w,firstTry); say("Yes! "+target.w,false); later(900,()=>{idx++;round();}); }
+      if(ch.dataset.w===target.w){ ch.classList.add("right"); ok++; srsRecord(target.w,firstTry); say("Yes! "+target.w,false);
+        /* listen mode: reveal the spelling now that the ear did the work */
+        if(kind==="listen"){ const s=document.querySelector("#rwSay"); if(s) s.textContent="🔊 "+target.w; }
+        later(900,()=>{idx++;round();}); }
       else { ch.classList.add("wrong"); firstTry=false; say("Try again"); later(450,()=>ch.classList.remove("wrong")); }
     });
   }
