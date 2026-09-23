@@ -152,7 +152,7 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
 .prow .pnote{color:#8a7f70; font-weight:400; font-size:12px;}
 .pstars{letter-spacing:1px;}
 .pgrad{background:#eef7e8; border-radius:10px; padding:8px 10px; margin-top:8px; font-weight:800; text-align:center;}
-.pfoot{margin-top:10px; font-size:13px; color:#6b6257; text-align:center;}
+.pfoot{margin-top:8px; font-size:13px; color:#6b6257; text-align:center;}
 #grad{position:fixed; inset:0; z-index:80; background:rgba(51,48,42,.55); display:none; align-items:center; justify-content:center; padding:24px;}
 #grad.on{display:flex;}
 .gradin{background:#fffdf7; border-radius:28px; padding:36px 28px; text-align:center; max-width:380px; box-shadow:0 20px 60px rgba(0,0,0,.25); animation:pop .5s;}
@@ -163,7 +163,7 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
   width:100%; max-width:560px; max-height:92dvh; overflow-y:auto; overscroll-behavior:contain;}
 /* scroll containment: overlay content grows (Play together etc.) but Close/Reset stay reachable */
 .sheetin h2{margin:0 0 10px;}
-.sheetin p{color:var(--muted); font-size:14.5px;}
+.sheetin p{color:var(--muted); font-size:14.5px; margin:9px 0;}
 .sheetin .btn{width:100%; margin:8px 0;}
 .streak{display:inline-block; background:#fff; border-radius:999px; padding:8px 18px; font-weight:800; box-shadow:var(--shadow); margin-top:10px;}
 @media(min-width:640px){ .lvlgrid{grid-template-columns:1fr 1fr 1fr;} .lvl{flex-direction:column; text-align:center;} .lvl .st{margin:6px 0 0;} }
@@ -244,10 +244,10 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
 <!-- parent gate sheet -->
 <div class="sheet" id="sheet"><div class="sheetin">
   <h2>⚙️ Grown-ups</h2>
-  <p><b>How this works:</b> letters are taught in the order <i>s a t i p n …</i> (the Jolly Phonics sequence used in schools worldwide), because those six letters already make real words like <i>sat</i> and <i>pin</i>. Letter <b>sounds</b> come before letter names. Every word can be sounded out with letters already learned. No guessing.</p>
-  <p><b>Sound:</b> this app speaks with your device's voice (rate slowed for learners). For the pure letter sounds (ssss, not "ess"), please model them yourself: exaggerated and clipped, no added vowel ("mmm" not "muh").</p>
-  <p><b>Pace:</b> one level ≈ 5 minutes. Short daily sessions beat long ones. 🌟</p>
-  <h3 style="margin:18px 0 8px">📊 Progress</h3>
+  <p><b>Sounds first:</b> letters come in the <i>s a t i p n …</i> order schools use worldwide: those six letters already make real words like <i>sat</i> and <i>pin</i>. We teach letter sounds before letter names, and every word sounds out from letters already learned. No guessing.</p>
+  <p><b>The voice:</b> your device's voice, slowed down for learners. The pure letter sounds come from you: stretch and clip them, no added vowel ("ssss" not "ess", "mmm" not "muh").</p>
+  <p><b>Pace:</b> about 5 minutes per level. Short daily sessions beat long ones. 🌟</p>
+  <h3 style="margin:14px 0 8px">📊 Progress</h3>
   <div id="parentProg"></div>
   <div style="margin-top:14px"><button class="btn ghost" id="voiceTest">🔊 Test voice</button>
   <button class="btn coral" id="resetProg">Reset all progress</button></div>
@@ -1293,7 +1293,7 @@ function tonightIdea(){
     const li=doneLvls[day%doneLvls.length];
     const dp=(DIALOG[li]||[]).find(p=>p.k==="grownup");
     if(dp) return {t:"\uD83D\uDCAC Ask at dinner",
-      d:"Your child read the Level "+(li+1)+" story. At dinner, ask: \u201C"+dp.q+"\u201D Let them answer in their own words \u2014 any answer is a great answer!",
+      d:"Your child read the Level "+(li+1)+" story. At dinner, ask: \u201C"+dp.q+"\u201D Let them answer in their own words. Any answer is a great answer!",
       id:"ask"+li+"-"+day};
   }
   const pool=[...td.struggling.map(x=>x.w),...td.learning.map(x=>x.w)];
@@ -1306,16 +1306,16 @@ function tonightIdea(){
 function renderTogether(){
   const td=togetherData(), idea=tonightIdea(), tg=togetherGet(), done=!!tg[idea.id];
   const chip=x=>`<span class="tchip">${x.w}</span>`;
-  return `<h3 style="margin:18px 0 8px">\uD83E\uDD1D Play together <span class="pnote">5 min, no screen</span></h3>
+  return `<h3 style="margin:14px 0 8px">\uD83E\uDD1D Play together <span class="pnote">5 min, no screen</span></h3>
   <div class="together">
     <p style="margin:0 0 6px"><b>${idea.t}</b></p>
     <p class="pnote" style="margin:0 0 10px">${idea.d}</p>
-    ${done?'<p style="color:#2a7">\u2705 Done today \u2014 nice work!</p>'
+    ${done?'<p style="color:#2a7">\u2705 Done today. Nice work!</p>'
           :'<button class="btn coral" id="tgDone">\u2705 We did it!</button>'}
-    ${td.struggling.length?`<p style="margin:12px 0 4px"><b>\uD83E\uDDE0 Gently practice:</b></p><div>${td.struggling.map(chip).join("")}</div>
+    ${td.struggling.length?`<p style="margin:8px 0 3px"><b>\uD83E\uDDE0 Gently practice:</b></p><div>${td.struggling.map(chip).join("")}</div>
       <p class="pnote">Say the word, let them repeat, keep it light.</p>`:""}
-    ${td.mastered.length?`<p style="margin:12px 0 4px"><b>\uD83C\uDF1F Celebrate:</b></p><div>${td.mastered.map(chip).join("")}</div>
-      <p class="pnote">These are sticking \u2014 point them out in books!</p>`:""}
+    ${td.mastered.length?`<p style="margin:8px 0 3px"><b>\uD83C\uDF1F Celebrate:</b></p><div>${td.mastered.map(chip).join("")}</div>
+      <p class="pnote">These are sticking. Point them out in books!</p>`:""}
   </div>`;
 }
 function renderParentProg(){
@@ -1326,7 +1326,8 @@ function renderParentProg(){
     const have = (prog.steps&&prog.steps[i])||{};
     const bits = [["listen","👂"],["blend","🧩"],["read","📖"],["write","✏️"]]
       .map(([k,ic])=>ic+(have[k]?"✓":"·")).join(" ");
-    return `<div class="prow"><span><b>Level ${i+1}</b> <span class="pnote">${L.desc}</span>${done?"":`<br><span class="pnote">${bits}</span>`}</span><span class="pstars">${done?"⭐".repeat(st)+"☆".repeat(Math.max(0,3-st)):"🔒"}</span></div>`;
+    /* step marks share the desc line: one compact row per level, no forced second line */
+    return `<div class="prow"><span><b>Level ${i+1}</b> <span class="pnote">${L.desc}</span>${done?"":` <span class="pnote">${bits}</span>`}</span><span class="pstars">${done?"⭐".repeat(st)+"☆".repeat(Math.max(0,3-st)):"🔒"}</span></div>`;
   }).join("");
   const grad = localStorage.getItem("fe_grad") ? `<div class="pgrad">🎓 All 9 levels complete!</div>` : "";
   $("#parentProg").innerHTML = `<div class="pgrid">${rows}</div>${grad}
