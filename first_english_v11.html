@@ -56,7 +56,7 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
 .l8{border-color:#c9f2d8;} .l9{border-color:#ead9f0;}
 .sightcard h2{margin:0 0 4px;}
 .setpills{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
-.setpill{border:2px solid #ffd9a8; background:#fff; border-radius:999px; padding:6px 14px; font-size:14px; font-weight:700; color:#b06a2a; cursor:pointer;}
+.setpill{border:2px solid #ffd9a8; background:#fff; border-radius:999px; padding:6px 14px; min-height:44px; font-size:14px; font-weight:700; color:#b06a2a; cursor:pointer;}
 .setpill.on{background:#ff9d5c; border-color:#ff9d5c; color:#fff;}
 .sightgrid{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
 .qzbtn.hint{animation:hintpulse 1s ease-in-out 3; border-color:#2e7d32;}
@@ -81,6 +81,7 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
 .qzdone .big{font-size:64px;}
 .qzdone h2{margin:10px 0 18px;}
 .sw .swe{font-size:24px;}
+.sw .spkcue{font-size:17px; opacity:.72;}
 .steptabs{display:flex; gap:8px; margin:0 0 16px; overflow-x:auto; padding-bottom:4px;}
 .steptabs::-webkit-scrollbar{display:none;}
 .stab{flex:1 0 auto; border:0; border-radius:16px; padding:10px 14px; min-height:44px; font:inherit; font-weight:800; font-size:15px;
@@ -386,7 +387,7 @@ const LEVELS = [
     {t:"Puff! The duck is in the mud.",e:"🦆"},{t:"Pick up the sock.",e:"👆"},
     {t:"The bell is on the hill.",e:"🔔"},{t:"Buzz! Kiss the pig.",e:"🐝"}] }
 ];
-let sightSet=0;
+let sightSet=(()=>{ try{ const v=parseInt(localStorage.getItem("fe_sightset"),10); return Number.isInteger(v)&&v>=0?v:0; }catch(e){ return 0; } })();
 const SIGHT_WORDS=[
   {w:"I",e:"",set:1},
   {w:"a",e:"",set:1},
@@ -594,11 +595,12 @@ function renderHome(){
       <span class="st">${stars}</span></button>`;
   }).join("");
   const sets=[...new Set(SIGHT_WORDS.map(s=>s.set))].sort((a,b)=>a-b);
+  if(sightSet!==0&&!sets.includes(sightSet)) sightSet=0; /* stored set no longer exists: fall back to All */
   $("#setpills").innerHTML = [`<button class="setpill${sightSet===0?" on":""}" data-set="0">All</button>`,
     ...sets.map(n=>`<button class="setpill${sightSet===n?" on":""}" data-set="${n}">Set ${n}</button>`)].join("");
   const vis = sightSet===0 ? SIGHT_WORDS : SIGHT_WORDS.filter(s=>s.set===sightSet);
   $("#sightgrid").innerHTML = vis.map(s=>
-    `<button class="sw" data-say="${s.w}">${s.e?`<span class="swe">${s.e}</span>`:""}<span class="sww">${s.w}</span></button>`).join("");
+    `<button class="sw" data-say="${s.w}">${s.e?`<span class="swe">${s.e}</span>`:`<span class="swe spkcue" aria-hidden="true">🔊</span>`}<span class="sww">${s.w}</span></button>`).join("");
   const due=srsDue();
   const dc=$("#dueCard");
   if(due.length){
@@ -1233,7 +1235,8 @@ function talkNext(){
 /* ================= EVENTS ================= */
 document.addEventListener("click",e=>{
   const sp=e.target.closest("[data-say]"); if(sp){ say(sp.dataset.say); return; }
-  const stp=e.target.closest("[data-set]"); if(stp){ sightSet=+stp.dataset.set; renderHome(); return; }
+  const stp=e.target.closest("[data-set]"); if(stp){ sightSet=+stp.dataset.set;
+    try{ localStorage.setItem("fe_sightset",String(sightSet)); }catch(e){} renderHome(); return; }
   const lv=e.target.closest("[data-lvl]"); if(lv&&!lv.disabled){ openLevel(+lv.dataset.lvl); return; }
   const st=e.target.closest("[data-step]"); if(st){ step=st.dataset.step; renderLevel(); return; }
 });
@@ -1342,9 +1345,9 @@ $("#closeSheet").onclick=()=>$("#sheet").classList.remove("on");
 $("#voiceTest").onclick=()=>say("Hello! The cat sat on the mat.");
 /* Every localStorage key this app owns. resetAllProgress() clears all of them.
    Add new keys HERE and reset can never go stale again. */
-const FE_KEYS=["fe_prog","fe_streak","fe_srs","fe_adapt","fe_together","fe_grad"];
+const FE_KEYS=["fe_prog","fe_streak","fe_srs","fe_adapt","fe_together","fe_grad","fe_sightset"];
 function resetAllProgress(){
-  prog={done:[],stars:{},steps:{}}; streak={count:0,last:""};
+  prog={done:[],stars:{},steps:{}}; streak={count:0,last:""}; sightSet=0;
   FE_KEYS.forEach(k=>{ try{localStorage.removeItem(k);}catch(e){} });
   /* keys stay absent: loadJSON defaults apply on next load, so nothing stale
      (graduation, SRS, streak) can survive a reset */
