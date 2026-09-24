@@ -889,11 +889,17 @@ const SRS_STEPS=[1,4,10,30];
 function loadSRS(){ return loadJSON("fe_srs",{}); }
 function saveSRS(o){ saveJSON("fe_srs",o); }
 function srsRecord(word, okFirst){
-  const s=loadSRS(), r=s[word]||{streak:0,iv:1,due:0}, now=Date.now();
+  const s=loadSRS(), r=s[word]||{}, now=Date.now();
+  /* Normalize at the boundary: a record from an older build (or any sparse
+     shape) may lack numeric fields. Without this, r.streak++ on undefined
+     yields NaN, r.due becomes NaN, JSON saves it as null, and srsDue()'s
+     null<=now check then treats the word as due FOREVER: the Tricky-words
+     card could never clear no matter how often the child reviewed it. */
+  r.streak=r.streak|0; r.iv=(+r.iv)||1; r.consecErr=r.consecErr|0; r.h=r.h||[];
   if(r.lastSeen && now-r.lastSeen>14*864e5){ r.h=[]; r.consecErr=0; } /* old failures decay */
   if(okFirst){ r.streak++; r.iv=SRS_STEPS[Math.min(r.streak-1,SRS_STEPS.length-1)]; r.consecErr=0; }
   else { r.streak=0; r.iv=1; r.consecErr=(r.consecErr||0)+1; }
-  r.h=(r.h||[]); r.h.push(okFirst?1:0); if(r.h.length>5) r.h=r.h.slice(-5);
+  r.h.push(okFirst?1:0); if(r.h.length>5) r.h=r.h.slice(-5);
   r.lastSeen=now; r.due=now+r.iv*864e5; s[word]=r; saveSRS(s);
 }
 function adaptGet(){ return loadJSON("fe_adapt",{}); }
