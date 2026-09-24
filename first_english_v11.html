@@ -656,9 +656,10 @@ function gameRound(kind){
     window._listenT = (kind==="listen") ? target.w : "";
     const play=()=>say(target.w);
     $("#rwSay").onclick=play; later(500,play);
-    let firstTry=true; /* per-word outcome feeds the SRS, same contract as quizPick */
+    let firstTry=true, answered=false; /* per-word outcome feeds the SRS, same contract as quizPick */
     body.querySelectorAll(".choice").forEach(ch=>ch.onclick=()=>{
-      if(ch.dataset.w===target.w){ ch.classList.add("right"); ok++; srsRecord(target.w,firstTry); say("Yes! "+target.w,false);
+      if(answered) return; /* stray/double taps after the answer can't pile on (matches quizPick's qz.answered) */
+      if(ch.dataset.w===target.w){ answered=true; ch.classList.add("right"); ok++; srsRecord(target.w,firstTry); say("Yes! "+target.w,false);
         /* listen mode: reveal the spelling now that the ear did the work */
         if(kind==="listen"){ const s=document.querySelector("#rwSay"); if(s) s.textContent="🔊 "+target.w; }
         later(900,()=>{idx++;round();}); }
@@ -934,13 +935,16 @@ function adaptivePool(bank,kind){
   return pool.slice(0,6);
 }
 function srsDue(){
-  /* every bank with SRS recording drains through this one list: sight words
-     plus all level words, deduped. Recording without a review path is data loss. */
+  /* every bank with SRS recording drains through this one list: sight words,
+     all level words, AND the minimal-pairs words (pairs rounds record SRS for
+     words like "sheep"/"cap" that appear in no level word list). Recording
+     without a review path is data loss. */
   const s=loadSRS(), now=Date.now(), seen={};
   const all=[];
   const add=w=>{ if(w&&w.w&&!seen[w.w]){ seen[w.w]=1; all.push(w); } };
   SIGHT_WORDS.forEach(add);
   LEVELS.forEach(L=>(L.words||[]).forEach(add));
+  MIN_PAIRS.forEach(p=>{ add(p.a); add(p.b); });
   return all.filter(w=>{ const r=s[w.w]; return r&&r.due<=now; });
 }
 /* ================= LISTENING QUIZ ================= */
