@@ -26,6 +26,9 @@ header.hero{background:linear-gradient(160deg,#ff9a8b,#ff6f61 55%,#f8574a); colo
   padding:26px 20px 30px; border-radius:0 0 34px 34px; text-align:center; box-shadow:var(--shadow);}
 header.hero .heroin{max-width:var(--colw); margin:0 auto; padding:0 14px;}
 header.hero h1{margin:0; font-size:30px; letter-spacing:.5px;}
+/* narrow phones: the fixed parent-gate gear sits over the hero's right side;
+   shrink the title so the centered text clears it (320px: 16px overlap -> 0) */
+@media(max-width:360px){ header.hero h1{font-size:24px;} }
 header.hero p{margin:6px 0 0; font-size:15px; opacity:.95;}
 main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
 /* wide screens: let the column breathe instead of stranding content mid-page */
@@ -887,6 +890,10 @@ function startPairs(){
 }
 /* ================= SPACED REPETITION (sight words) ================= */
 const SRS_STEPS=[1,4,10,30];
+/* Minimum time between interval advances: one step up per study session.
+   A win inside the gap still records (history + lastSeen), it just does
+   not retire the word further. 12h = morning session vs evening session. */
+const SRS_MIN_GAP=12*36e5;
 function loadSRS(){ return loadJSON("fe_srs",{}); }
 function saveSRS(o){ saveJSON("fe_srs",o); }
 function srsRecord(word, okFirst){
@@ -898,7 +905,19 @@ function srsRecord(word, okFirst){
      card could never clear no matter how often the child reviewed it. */
   r.streak=r.streak|0; r.iv=(+r.iv)||1; r.consecErr=r.consecErr|0; r.h=r.h||[];
   if(r.lastSeen && now-r.lastSeen>14*864e5){ r.h=[]; r.consecErr=0; } /* old failures decay */
-  if(okFirst){ r.streak++; r.iv=SRS_STEPS[Math.min(r.streak-1,SRS_STEPS.length-1)]; r.consecErr=0; }
+  if(okFirst){
+    /* Spacing integrity: the interval only steps up between separate study
+       sessions. An immediate "Play again" replay is massed practice, not
+       spaced retrieval — letting it advance the interval (1->4->10 days
+       within minutes) would retire the word from review before any real
+       spacing happened. The win still counts in the history and refreshes
+       lastSeen; only the interval advance waits for SRS_MIN_GAP. A miss
+       always resets, at any time: getting it wrong is honest evidence. */
+    if(!r.lastSeen || now-r.lastSeen>=SRS_MIN_GAP){
+      r.streak++; r.iv=SRS_STEPS[Math.min(r.streak-1,SRS_STEPS.length-1)];
+    }
+    r.consecErr=0;
+  }
   else { r.streak=0; r.iv=1; r.consecErr=(r.consecErr||0)+1; }
   r.h.push(okFirst?1:0); if(r.h.length>5) r.h=r.h.slice(-5);
   r.lastSeen=now; r.due=now+r.iv*864e5; s[word]=r; saveSRS(s);
