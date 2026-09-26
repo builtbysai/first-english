@@ -505,6 +505,12 @@ const OWL_SAY = {
 function loadJSON(key,fb){ try{ const v=JSON.parse(localStorage.getItem(key)); return (v&&typeof v==="object")?v:fb; }catch(e){ return fb; } }
 function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
 let prog = loadJSON("fe_prog",{"done":[],"stars":{},"steps":{}});
+/* Normalize legacy/sparse saves at the boundary: a corrupt field (null or a
+   wrong type) degrades to its fresh default instead of crashing renderHome
+   (prog.stars[i] throws when stars is null; prog.done.includes throws when
+   done is not an array). Same boundary-normalization idiom as srsRecord. */
+if(!Array.isArray(prog.done)) prog.done=[];
+if(!prog.stars||typeof prog.stars!=="object") prog.stars={};
 if(!prog.steps||typeof prog.steps!=="object") prog.steps={}; /* old saves predate step tracking */
 let streak = loadJSON("fe_streak",{"count":0,"last":""});
 let cur = 0, step = "letters";
@@ -908,7 +914,7 @@ function srsRecord(word, okFirst){
   if(okFirst){
     /* Spacing integrity: the interval only steps up between separate study
        sessions. An immediate "Play again" replay is massed practice, not
-       spaced retrieval — letting it advance the interval (1->4->10 days
+       spaced retrieval (letting it advance the interval (1->4->10 days
        within minutes) would retire the word from review before any real
        spacing happened. The win still counts in the history and refreshes
        lastSeen; only the interval advance waits for SRS_MIN_GAP. A miss
