@@ -504,6 +504,11 @@ const OWL_SAY = {
 /* Single safe reader for every JSON key: corrupt storage can never blank the app. */
 function loadJSON(key,fb){ try{ const v=JSON.parse(localStorage.getItem(key)); return (v&&typeof v==="object")?v:fb; }catch(e){ return fb; } }
 function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+/* Raw string keys (fe_grad, fe_sightset) go through the same guarded idiom:
+   when storage itself throws (private-mode quota, full disk), reads degrade
+   to null and writes are dropped instead of breaking the handler. */
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 let prog = loadJSON("fe_prog",{"done":[],"stars":{},"steps":{}});
 /* Normalize legacy/sparse saves at the boundary: a corrupt field (null or a
    wrong type) degrades to its fresh default instead of crashing renderHome
@@ -855,8 +860,8 @@ function stepStory(){
     save(); bumpStreak(); renderHome();
     show("s-home"); say("Amazing! You read a story!");
     const allDone = LEVELS.every((L,i)=>prog.done.includes(i));
-    if(allDone && !localStorage.getItem("fe_grad")){
-      localStorage.setItem("fe_grad","1");
+    if(allDone && !lsGet("fe_grad")){
+      lsSet("fe_grad","1");
       setTimeout(()=>{ $("#grad").classList.add("on"); say("Wow! You finished every level! You are a reading star!"); },600);
     }
   };
@@ -1364,7 +1369,7 @@ function renderParentProg(){
     /* step marks share the desc line: one compact row per level, no forced second line */
     return `<div class="prow"><span><b>Level ${i+1}</b> <span class="pnote">${L.desc}</span>${done?"":` <span class="pnote">${bits}</span>`}</span><span class="pstars">${done?"⭐".repeat(st)+"☆".repeat(Math.max(0,3-st)):"🔒"}</span></div>`;
   }).join("");
-  const grad = localStorage.getItem("fe_grad") ? `<div class="pgrad">🎓 All 9 levels complete!</div>` : "";
+  const grad = lsGet("fe_grad") ? `<div class="pgrad">🎓 All 9 levels complete!</div>` : "";
   $("#parentProg").innerHTML = `<div class="pgrid">${rows}</div>${grad}
     <div class="pfoot">🔥 ${streak.count} day streak · 📝 ${SIGHT_WORDS.length} sight words · 🔁 ${srsDue().length} due for review</div>${renderTogether()}`;
   const tgBtn=$("#tgDone");
