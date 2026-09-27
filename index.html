@@ -843,7 +843,10 @@ function stepStory(){
     + `<div class="center note" id="lvlNote" style="min-height:22px;margin-top:6px"></div>`
     + `<div class="center" style="margin-top:10px"><button class="btn ghost" id="lvlQuiz">🎯 Quiz me on these words</button></div>`;
   $("#stepbody").querySelectorAll(".spk").forEach(b=>b.onclick=()=>say(L.story[+b.dataset.si].t));
-  setTimeout(()=>say(L.story[0].t),700);
+  /* later(), not raw setTimeout: if the child taps another step tab or goes
+     home within 700ms, the auto-speak dies with this screen instead of
+     talking over the next one. */
+  later(700,()=>say(L.story[0].t));
   $("#finishLvl").onclick=()=>{
     /* The level counts only when the child really did the work: every one of the
        four practice steps must be finished before "I did it!" can complete the level.
@@ -1192,6 +1195,7 @@ function startTalk(){
   renderTalk();
 }
 function renderTalk(){
+  screenSeq++; /* new prompt screen: stale auto-speech timers from the previous screen die */
   const p=talk.prompts[talk.idx]; talk.cur=p;
   const spoken=p.q.replace(/___/g,"...");
   if(p.k==="tap"){
@@ -1203,7 +1207,7 @@ function renderTalk(){
       <div class="center" style="margin-top:10px"><button class="btn ghost" id="talkBack">\u2190 Back to story</button></div>`;
     $("#talkHear").onclick=()=>say(spoken);
     $("#talkBack").onclick=()=>{ stopTalkRec(); talk=null; renderLevel(); };
-    setTimeout(()=>{ if(talk&&talk.cur===p) say(spoken); },400);
+    later(400,()=>{ if(talk&&talk.cur===p) say(spoken); });
     $("#talkOpts").querySelectorAll("button").forEach(b=>b.onclick=()=>talkAnswer(+b.dataset.i));
   }else{
     $("#stepbody").innerHTML=`<div class="card" style="text-align:center"><div class="center note">${talk.idx+1} of ${talk.prompts.length}</div>
@@ -1213,11 +1217,13 @@ function renderTalk(){
       <button class="btn coral" id="talkStar">\u2B50 Great answer!</button>
       <div class="center" style="margin-top:10px"><button class="btn ghost" id="talkBack">\u2190 Back to story</button></div></div>`;
     $("#talkBack").onclick=()=>{ stopTalkRec(); talk=null; renderLevel(); };
-    setTimeout(()=>{ if(talk&&talk.cur===p) say(p.q); },400);
+    later(400,()=>{ if(talk&&talk.cur===p) say(p.q); });
     $("#talkStar").onclick=()=>{ say("Great talking!"); talkNext(); };
   }
 }
 function talkAnswer(i){
+  screenSeq++; /* expand replaces the question: the prompt's auto-speak timer
+     dies here instead of talking over the expand narration */
   const p=talk.cur;
   if(i!==p.a){ $("#talkFb").textContent="Almost! Listen and try again \uD83D\uDCAA"; say(p.q.replace(/___/g,"...")); return; }
   /* Evaluate + Expand + Repeat (PEER) */
