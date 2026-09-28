@@ -852,11 +852,16 @@ function stepStory(){
        four practice steps must be finished before "I did it!" can complete the level.
        Stars were already earned in the Listen/Read rounds; the button grants none. */
     const NEED={listen:"👂 Listen",blend:"🧩 Build",read:"📖 Read",write:"✏️ Write"};
+    /* spoken step names: the audio must use the child-facing names ("Build"),
+       never the raw step keys ("blend" is not a word anywhere in the UI) */
+    const NEED_SAY={listen:"Listen",blend:"Build",read:"Read",write:"Write"};
     const have=prog.steps[cur]||{};
     const missing=Object.keys(NEED).filter(k=>!have[k]);
     if(missing.length){
       $("#lvlNote").textContent="Almost there! Finish first: "+missing.map(k=>NEED[k]).join(", ");
-      say("Almost there! Finish "+missing.join(" and ")+" first.");
+      const sayNames=missing.map(k=>NEED_SAY[k]||k);
+      const sayList=sayNames.length<2?sayNames.join(""):sayNames.slice(0,-1).join(", ")+" and "+sayNames[sayNames.length-1];
+      say("Almost there! Finish "+sayList+" first.");
       return;
     }
     if(!prog.done.includes(cur)) prog.done.push(cur);
