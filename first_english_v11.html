@@ -1136,6 +1136,9 @@ function speakListen(){
 }
 function speakHeard(heard){
   if(!spk) return; /* user navigated away between final result and this handler */
+  if(spk.answered) return; /* round already answered: a second mic result inside
+    the 1400ms advance window can't skip a prompt, double the star, or talk
+    over the "Yes!" feedback (matches quizPick's qz.answered) */
   stopSpeakRec();
   const target=spk.target, mode=target.word?"words":"sentences";
   $("#spkHeard").textContent="\u201C"+heard+"\u201D";
