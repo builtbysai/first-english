@@ -1018,7 +1018,11 @@ function renderQuizQ(){
     <div class="qzgrid" id="qzOpts">${opts.map((x,i)=>`<button class="sw qzbtn" data-qz="${i}">${x.e?`<span class="swe">${x.e}</span>`:""}<span class="sww">${x.w}</span></button>`).join("")}</div>`;
   $("#qzHear").onclick=()=>say("Find: "+target.w);
   $("#qzBody").querySelectorAll("[data-qz]").forEach(b=>b.onclick=()=>quizPick(+b.dataset.qz,opts,target,b));
-  setTimeout(()=>{ if(qz&&qz.target===target) say("Find: "+target.w); },400);
+  /* !qz.answered: a correct tap inside 400ms re-arms nothing but the
+     auto-speak timer must die, or "Find: X" talks over the "Yes!" feedback
+     (same race class the v45 talk fix closed). A wrong tap re-speaks the
+     question, which is the intended repeat. */
+  setTimeout(()=>{ if(qz&&!qz.answered&&qz.target===target) say("Find: "+target.w); },400);
 }
 function quizPick(i,opts,target,btn){
   if(!qz||qz.answered) return; /* round already answered: stray taps can't pile on hint speech */
@@ -1086,7 +1090,7 @@ function startSpeak(){
 }
 function renderSpeakQ(){
   stopSpeakRec();
-  const target=spk.pool[spk.idx]; spk.target=target; spk.firstTry=true;
+  const target=spk.pool[spk.idx]; spk.target=target; spk.firstTry=true; spk.answered=false;
   const label = target.word ? target.word : target.t;
   $("#spkBody").innerHTML=`<div class="card starscreen">
     <div class="center note">${spk.idx+1} of ${spk.pool.length} &nbsp;<span style="font-size:20px">${"⭐".repeat(spk.stars)}</span></div>
@@ -1099,7 +1103,7 @@ function renderSpeakQ(){
     <div class="center" id="spkFb" style="min-height:26px;font-weight:700"></div></div>`;
   $("#spkHear").onclick=()=>say(label);
   $("#spkMic").onclick=()=>speakListen();
-  setTimeout(()=>{ if(spk&&spk.target===target) say("Say: "+label); },400);
+  setTimeout(()=>{ if(spk&&!spk.answered&&spk.target===target) say("Say: "+label); },400);
 }
 function stopSpeakRec(){ if(spk&&spk.rec){ try{spk.rec.abort();}catch(e){} spk.rec=null; } if(spk) spk.listening=false; const m=$("#spkMic"); if(m) m.classList.remove("live"); }
 function speakListen(){
@@ -1136,6 +1140,8 @@ function speakHeard(heard){
   const target=spk.target, mode=target.word?"words":"sentences";
   $("#spkHeard").textContent="\u201C"+heard+"\u201D";
   if(speakGrade(heard,target,mode)){
+    spk.answered=true; /* a correct answer inside the 400ms auto-speak window
+      must kill the pending "Say: X" timer, or it talks over the "Yes!" feedback */
     if(spk.firstTry) spk.stars++;
     $("#spkFb").textContent="Yes! ⭐";
     say("Yes! "+(target.word||target.t));
