@@ -518,6 +518,11 @@ if(!Array.isArray(prog.done)) prog.done=[];
 if(!prog.stars||typeof prog.stars!=="object") prog.stars={};
 if(!prog.steps||typeof prog.steps!=="object") prog.steps={}; /* old saves predate step tracking */
 let streak = loadJSON("fe_streak",{"count":0,"last":""});
+/* Boundary normalize (same sparse-record class as the v42 fe_prog fix): a
+   non-numeric count would render as garbage on the home screen ("oops1")
+   and poison the streak arithmetic. */
+streak.count = streak.count|0;
+if(typeof streak.last!=="string") streak.last="";
 let cur = 0, step = "letters";
 const $ = s=>document.querySelector(s);
 function save(){ saveJSON("fe_prog",prog); }
@@ -589,12 +594,17 @@ function show(id){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
   $("#"+id).classList.add("on"); window.scrollTo({top:0});
 }
-function todayStr(){ return new Date().toISOString().slice(0,10); }
+/* Local calendar days, NOT UTC: toISOString() rolls the "day" at 7/8pm for a
+   US user, so an evening practice session could bump the streak twice in one
+   local day, or lose the streak across two consecutive local evenings. */
+function todayStr(){ const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function yestStr(){ const y=new Date(); y.setDate(y.getDate()-1);
+  return y.getFullYear()+"-"+String(y.getMonth()+1).padStart(2,"0")+"-"+String(y.getDate()).padStart(2,"0"); }
 function bumpStreak(){
   const t=todayStr();
   if(streak.last!==t){
-    const y=new Date(); y.setDate(y.getDate()-1);
-    streak.count = (streak.last===y.toISOString().slice(0,10)) ? streak.count+1 : 1;
+    streak.count = (streak.last===yestStr()) ? streak.count+1 : 1;
     streak.last=t; saveJSON("fe_streak",streak);
   }
 }
@@ -669,8 +679,12 @@ function gameRound(kind){
        revealed as a reward after a correct tap (sound -> spelling link). */
     window._listenT = (kind==="listen") ? target.w : "";
     const play=()=>say(target.w);
-    $("#rwSay").onclick=play; later(500,play);
+    $("#rwSay").onclick=play;
     let firstTry=true, answered=false; /* per-word outcome feeds the SRS, same contract as quizPick */
+    /* !answered: a correct tap inside 500ms must kill the pending auto-speak,
+       or say(<word>) talks over the "Yes!" feedback via stopSay() -- the same
+       stale-auto-speech race class the v46 fix closed for quiz and speak. */
+    later(500,()=>{ if(!answered) play(); });
     body.querySelectorAll(".choice").forEach(ch=>ch.onclick=()=>{
       if(answered) return; /* stray/double taps after the answer can't pile on (matches quizPick's qz.answered) */
       if(ch.dataset.w===target.w){ answered=true; ch.classList.add("right"); ok++; srsRecord(target.w,firstTry); say("Yes! "+target.w,false);
@@ -829,7 +843,12 @@ function stepWrite(){
         }
       }
     };
-    later(600,()=>say(t.w));
+    /* !done: a correct Check inside 600ms must kill the pending auto-speak, or
+       say(<word>) talks over the "Yes!" feedback via stopSay() -- the same
+       stale-auto-speech race class the v46 fix closed for quiz and speak
+       (and the v49 gameRound fix closed for Listen/Read). A wrong check
+       leaves done false, so the word still replays as a hint. */
+    later(600,()=>{ if(!done) say(t.w); });
   }
   round();
 }
@@ -870,6 +889,9 @@ function stepStory(){
     const allDone = LEVELS.every((L,i)=>prog.done.includes(i));
     if(allDone && !lsGet("fe_grad")){
       lsSet("fe_grad","1");
+      /* Deliberately NOT later(): this once-ever celebration must not be
+         droppable by fast tapping -- a stale-timer guard here would let a
+         quick "Levels" tap swallow the graduation moment. */
       setTimeout(()=>{ $("#grad").classList.add("on"); say("Wow! You finished every level! You are a reading star!"); },600);
     }
   };
