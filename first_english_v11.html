@@ -1368,22 +1368,26 @@ function togetherData(){
 }
 function tonightIdea(){
   /* rotates daily: dialogic dinner question (Troseth: model the question, hand to parent)
-     or an offline word hunt with words from the child's learning zone */
-  const day=Math.floor(Date.now()/864e5), td=togetherData();
+     or an offline word hunt with words from the child's learning zone.
+     Keyed to the LOCAL calendar day (todayStr, same as the streak), so the
+     idea flips at local midnight -- never at 7/8pm when UTC rolls over. */
+  const ds=todayStr();
+  let dh=0; for(const c of ds) dh=(dh*33+c.charCodeAt(0))|0; /* stable per local day */
+  const td=togetherData();
   const doneLvls=[...prog.done].sort((a,b)=>b-a);
-  if(doneLvls.length&&day%2===0){
-    const li=doneLvls[day%doneLvls.length];
+  if(doneLvls.length&&(dh&1)===0){
+    const li=doneLvls[Math.abs(dh)%doneLvls.length];
     const dp=(DIALOG[li]||[]).find(p=>p.k==="grownup");
     if(dp) return {t:"\uD83D\uDCAC Ask at dinner",
       d:"Your child read the Level "+(li+1)+" story. At dinner, ask: \u201C"+dp.q+"\u201D Let them answer in their own words. Any answer is a great answer!",
-      id:"ask"+li+"-"+day};
+      id:"ask"+li+"-"+ds};
   }
   const pool=[...td.struggling.map(x=>x.w),...td.learning.map(x=>x.w)];
   const srs=loadSRS(), fresh=SIGHT_WORDS.map(x=>x.w).filter(w=>!srs[w]);
   const picks=[...new Set([...pool,...fresh])].slice(0,3);
   return {t:"\uD83D\uDD0E Word hunt",
     d:"Write these on sticky notes, hide them around the house, and hunt them together: "+picks.map(w=>"\u201C"+w+"\u201D").join(", ")+". Cheer every find! \uD83C\uDF89",
-    id:"hunt-"+day};
+    id:"hunt-"+ds};
 }
 function renderTogether(){
   const td=togetherData(), idea=tonightIdea(), tg=togetherGet(), done=!!tg[idea.id];
