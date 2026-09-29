@@ -852,6 +852,9 @@ function stepWrite(){
   }
   round();
 }
+/* Pending graduation celebration timer. A reset is a full wipe: it must
+   cancel this, or the overlay pops up over the fresh home (H1a). */
+let gradTimer=null;
 function stepStory(){
   const L=LEVELS[cur];
   $("#stepbody").innerHTML = L.story.map((s,i)=>
@@ -891,8 +894,12 @@ function stepStory(){
       lsSet("fe_grad","1");
       /* Deliberately NOT later(): this once-ever celebration must not be
          droppable by fast tapping -- a stale-timer guard here would let a
-         quick "Levels" tap swallow the graduation moment. */
-      setTimeout(()=>{ $("#grad").classList.add("on"); say("Wow! You finished every level! You are a reading star!"); },600);
+         quick "Levels" tap swallow the graduation moment. It IS cancelled by
+         a reset (gradTimer), and it re-checks fe_grad at fire time, so a
+         wipe between the tap and the 600ms mark cancels the celebration. */
+      gradTimer=setTimeout(()=>{ gradTimer=null;
+        if(!lsGet("fe_grad")) return; /* reset since: celebration cancelled */
+        $("#grad").classList.add("on"); say("Wow! You finished every level! You are a reading star!"); },600);
     }
   };
   $("#gradOk").onclick=()=>$("#grad").classList.remove("on");
@@ -1384,7 +1391,10 @@ function tonightIdea(){
   }
   const pool=[...td.struggling.map(x=>x.w),...td.learning.map(x=>x.w)];
   const srs=loadSRS(), fresh=SIGHT_WORDS.map(x=>x.w).filter(w=>!srs[w]);
-  const picks=[...new Set([...pool,...fresh])].slice(0,3);
+  /* The hunt must never come up empty: a child who mastered every sight
+     word (no struggling, no learning, nothing fresh) still gets a hunt,
+     drawn from mastered words instead of a broken "together: ." sentence. */
+  const picks=[...new Set([...pool,...fresh,...td.mastered.map(x=>x.w)])].slice(0,3);
   return {t:"\uD83D\uDD0E Word hunt",
     d:"Write these on sticky notes, hide them around the house, and hunt them together: "+picks.map(w=>"\u201C"+w+"\u201D").join(", ")+". Cheer every find! \uD83C\uDF89",
     id:"hunt-"+ds};
@@ -1435,6 +1445,14 @@ $("#voiceTest").onclick=()=>say("Hello! The cat sat on the mat.");
 const FE_KEYS=["fe_prog","fe_streak","fe_srs","fe_adapt","fe_together","fe_grad","fe_sightset"];
 function resetAllProgress(){
   prog={done:[],stars:{},steps:{}}; streak={count:0,last:""}; sightSet=0;
+  /* A reset is a full wipe, so in-flight state dies with it -- exactly like
+     the per-screen back buttons (qzBack/spkBack/talkBack) tear down their
+     own round state. Without this, pending raw-setTimeout advance/auto-speak
+     timers from a quiz or speak round fire after the wipe and talk over the
+     fresh home, and the 600ms graduation timer celebrates on it. */
+  stopSpeakRec(); spk=null; qz=null; stopTalkRec(); talk=null;
+  if(gradTimer){ clearTimeout(gradTimer); gradTimer=null; }
+  const g=$("#grad"); if(g) g.classList.remove("on");
   FE_KEYS.forEach(k=>{ try{localStorage.removeItem(k);}catch(e){} });
   /* keys stay absent: loadJSON defaults apply on next load, so nothing stale
      (graduation, SRS, streak) can survive a reset */
