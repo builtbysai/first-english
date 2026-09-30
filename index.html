@@ -637,6 +637,10 @@ function renderHome(){
 function openLevel(i){ cur=i; step="letters"; renderLevel(); show("s-level"); }
 function renderLevel(){
   screenSeq++; /* new step: stale timers from the previous step die */
+  if(talk){ stopTalkRec(); talk=null; } /* leaving the talk screen by ANY route
+    (step tab, Next, back) kills its mic session with its UI, exactly like
+    talkBack does; otherwise recognition keeps listening on the new screen
+    and its result grades and speaks over it */
   const L=LEVELS[cur];
   $("#steptabs").innerHTML = STEP_DEFS.map(s=>
     `<button class="stab ${step===s.id?"on "+({letters:"s1",listen:"s2",blend:"s3",read:"s4",write:"s5",story:"s4"}[s.id]):""}" data-step="${s.id}">${s.icon} ${s.label}</button>`).join("");
@@ -1329,7 +1333,7 @@ document.addEventListener("click",e=>{
   const lv=e.target.closest("[data-lvl]"); if(lv&&!lv.disabled){ openLevel(+lv.dataset.lvl); return; }
   const st=e.target.closest("[data-step]"); if(st){ step=st.dataset.step; renderLevel(); return; }
 });
-$("#backHome").onclick=()=>{ renderHome(); show("s-home"); };
+$("#backHome").onclick=()=>{ if(talk){ stopTalkRec(); talk=null; } renderHome(); show("s-home"); };
 $("#quizBtn").onclick=()=>{ const b=sightSet===0?SIGHT_WORDS:SIGHT_WORDS.filter(s=>s.set===sightSet);
   startQuiz({bank:adaptivePool(b,"sight"),kind:"sight"}); };
 $("#pairsBtn").onclick=()=>startPairs();
