@@ -1422,12 +1422,17 @@ function renderParentProg(){
   const rows = LEVELS.map((L,i)=>{
     const st = prog.stars[i]||0;
     const done = prog.done.includes(i);
+    /* Lock only what the child truly cannot open yet, mirroring the home
+       screen rule (locked = previous level unfinished). A plain unfinished
+       check marked even the current playable level 🔒, telling parents it
+       was locked while their child could play it. ▶ = the current level. */
+    const locked = i>0 && !prog.done.includes(i-1);
     /* per-step progress for the parent: which practice steps the child has finished */
     const have = (prog.steps&&prog.steps[i])||{};
     const bits = [["listen","👂"],["blend","🧩"],["read","📖"],["write","✏️"]]
       .map(([k,ic])=>ic+(have[k]?"✓":"·")).join(" ");
     /* step marks share the desc line: one compact row per level, no forced second line */
-    return `<div class="prow"><span><b>Level ${i+1}</b> <span class="pnote">${L.desc}</span>${done?"":` <span class="pnote">${bits}</span>`}</span><span class="pstars">${done?"⭐".repeat(st)+"☆".repeat(Math.max(0,3-st)):"🔒"}</span></div>`;
+    return `<div class="prow"><span><b>Level ${i+1}</b> <span class="pnote">${L.desc}</span>${done?"":` <span class="pnote">${bits}</span>`}</span><span class="pstars">${done?"⭐".repeat(st)+"☆".repeat(Math.max(0,3-st)):(locked?"🔒":"▶")}</span></div>`;
   }).join("");
   const grad = lsGet("fe_grad") ? `<div class="pgrad">🎓 All 9 levels complete!</div>` : "";
   $("#parentProg").innerHTML = `<div class="pgrid">${rows}</div>${grad}
