@@ -515,8 +515,23 @@ let prog = loadJSON("fe_prog",{"done":[],"stars":{},"steps":{}});
    (prog.stars[i] throws when stars is null; prog.done.includes throws when
    done is not an array). Same boundary-normalization idiom as srsRecord. */
 if(!Array.isArray(prog.done)) prog.done=[];
-if(!prog.stars||typeof prog.stars!=="object") prog.stars={};
-if(!prog.steps||typeof prog.steps!=="object") prog.steps={}; /* old saves predate step tracking */
+if(!prog.stars||typeof prog.stars!=="object"||Array.isArray(prog.stars)) prog.stars={};
+if(!prog.steps||typeof prog.steps!=="object"||Array.isArray(prog.steps)) prog.steps={}; /* old saves predate step tracking */
+/* Normalize the PER-LEVEL entries too (same sparse-record idiom as loadSRS):
+   a truthy non-object steps entry (42, "junk") makes the round-finish write
+   (prog.steps[cur]||{})[kind]=true throw in strict mode and stall the round
+   on its last question; an array entry silently swallows the write, so the
+   step never records. A garbage stars entry breaks renderHome outright
+   ("⭐".repeat(-5) throws; repeat(99999) floods the card). Degrade every
+   entry to its sane shape at the boundary; valid progress is untouched. */
+for(const k of Object.keys(prog.steps)){
+  const v=prog.steps[k];
+  if(!v||typeof v!=="object"||Array.isArray(v)) prog.steps[k]={};
+}
+for(const k of Object.keys(prog.stars)){
+  const n=prog.stars[k]|0;
+  prog.stars[k]=Math.max(0,Math.min(3,n));
+}
 let streak = loadJSON("fe_streak",{"count":0,"last":""});
 /* Boundary normalize (same sparse-record class as the v42 fe_prog fix): a
    non-numeric count would render as garbage on the home screen ("oops1")
