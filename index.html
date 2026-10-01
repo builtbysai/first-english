@@ -946,7 +946,26 @@ const SRS_STEPS=[1,4,10,30];
    A win inside the gap still records (history + lastSeen), it just does
    not retire the word further. 12h = morning session vs evening session. */
 const SRS_MIN_GAP=12*36e5;
-function loadSRS(){ return loadJSON("fe_srs",{}); }
+function loadSRS(){
+  /* Normalize every record at the boundary (same sparse-record idiom as the
+     fe_prog v42 / fe_streak v49 load fixes): storage corruption or an
+     interrupted write can leave a record that is not a plain object, or
+     whose history is not an array. A truthy non-object record makes
+     srsRecord's field writes throw in strict mode, stalling every round
+     on its first correct answer; a non-array h makes togetherData and
+     challengeFor throw on h.reduce, killing the parent sheet and the
+     level-quiz pool. Every consumer reads through this one function, so
+     this is the single choke point; records self-heal on the next review. */
+  let s=loadJSON("fe_srs",{});
+  if(Array.isArray(s)) s={};
+  for(const w of Object.keys(s)){
+    let r=s[w];
+    if(!r||typeof r!=="object"||Array.isArray(r)) r={};
+    if(!Array.isArray(r.h)) r.h=[];
+    s[w]=r;
+  }
+  return s;
+}
 function saveSRS(o){ saveJSON("fe_srs",o); }
 function srsRecord(word, okFirst){
   const s=loadSRS(), r=s[word]||{}, now=Date.now();
