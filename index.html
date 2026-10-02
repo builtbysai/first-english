@@ -646,7 +646,7 @@ function renderHome(){
     dc.style.display="";
     const db=$("#dueBtn");
     db.textContent=`🔁 Review ${due.length} word${due.length===1?"":"s"}`;
-    db.onclick=()=>startQuiz({bank:due.slice(0,10),kind:"review"});
+    db.onclick=()=>startQuiz({bank:adaptivePool(due.slice(0,10),"review"),kind:"review"});
   } else dc.style.display="none";
 }
 function openLevel(i){ cur=i; step="letters"; renderLevel(); show("s-level"); }
@@ -1031,7 +1031,12 @@ function adaptivePool(bank,kind){
   let nDue=4,nLearn=1,nChal=1;
   if(lastMiss>=2){ nDue=2; nLearn=3; nChal=0; }
   else if(lastMiss===0){ nDue=3; nLearn=1; nChal=2; }
-  const pool=[...sh(due).slice(0,nDue),...sh(learning).slice(0,nLearn)];
+  /* a word can sit in both the due and learning lists (reviewed once, due
+     again); without the dedupe it appears twice in one round, asking the
+     same question twice and recording SRS twice for a single word */
+  const seenW=new Set(), pool=[];
+  for(const w of [...sh(due).slice(0,nDue),...sh(learning).slice(0,nLearn)])
+    if(!seenW.has(w.w)){ seenW.add(w.w); pool.push(w); }
   if(nChal>0) pool.push(...sh(challengeFor(bank,kind)).slice(0,nChal));
   for(const src of [rest,learning,due,bank]){
     for(const w of sh(src)){ if(pool.length>=6) break; if(pool.indexOf(w)<0) pool.push(w); }
