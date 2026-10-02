@@ -603,6 +603,14 @@ function ttsSay(text,slow){
     speechSynthesis.speak(u);
   }catch(e){}
 }
+/* Uniform shuffle (Fisher-Yates), in place, returns the array.
+   The old sort(()=>Math.random()-.5) idiom is NOT uniform: V8's sort with an
+   inconsistent comparator favors early elements (measured 0.63 vs the true
+   0.50 for two given items landing in the top 3 of 4). That quietly skewed
+   which pairs/questions/options children practiced, and even answer
+   positions. Every random ordering in the app goes through this one helper. */
+function shuf(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0;
+  const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 /* ================= SCREENS ================= */
 function show(id){
   screenSeq++; stopSay(); /* new screen: stale timers die, stale speech stops */
@@ -677,7 +685,7 @@ function stepLetters(){
 function gameRound(kind){
   // kind: 'listen' (hear word -> tap picture) or 'read' (see word -> tap picture)
   const L=LEVELS[cur];
-  const words=[...L.words].sort(()=>Math.random()-.5).slice(0,6);
+  const words=shuf([...L.words]).slice(0,6);
   let idx=0, ok=0;
   const body=$("#stepbody");
   function round(){
@@ -686,7 +694,7 @@ function gameRound(kind){
     const opts=[target];
     while(opts.length<3){ const c=L.words[Math.floor(Math.random()*L.words.length)];
       if(!opts.includes(c)) opts.push(c); }
-    opts.sort(()=>Math.random()-.5);
+    shuf(opts);
     body.innerHTML = (kind==="read"
       ? `<div class="bigword"><div class="w">${target.w}</div><button class="spk" id="rwSay">🔊 hear it</button></div>`
       : `<div class="bigword"><button class="spk" id="rwSay" style="font-size:26px">🔊</button></div>
@@ -736,7 +744,7 @@ function stepListen(){ gameRound("listen"); }
 function stepRead(){ gameRound("read"); }
 function stepBlend(){
   const L=LEVELS[cur];
-  const words=[...L.words].sort(()=>Math.random()-.5).slice(0,4);
+  const words=shuf([...L.words]).slice(0,4);
   let idx=0; const body=$("#stepbody");
   function round(){
     if(idx>=words.length){
@@ -775,7 +783,7 @@ function stepWrite(){
      Research: structured spelling/writing practice (IES/WWC; NRP spelling
      benefits). Misspellings feed the same SRS as other steps. */
   const L=LEVELS[cur];
-  const words=[...L.words].sort(()=>Math.random()-.5).slice(0,4);
+  const words=shuf([...L.words]).slice(0,4);
   let idx=0; const body=$("#stepbody");
   function round(){
     if(idx>=words.length){
@@ -790,9 +798,9 @@ function stepWrite(){
     const segs=segWord(t.w,taughtGraphs);
     /* scrambled tile order: the child must recall the spelling, not copy order.
        Reshuffle if the shuffle accidentally left tiles in correct order. */
-    let scrambled=[...segs].sort(()=>Math.random()-.5);
+    let scrambled=shuf([...segs]);
     for(let r=0; r<10 && scrambled.join("").toLowerCase()===t.w.toLowerCase(); r++){
-      scrambled=[...segs].sort(()=>Math.random()-.5);
+      scrambled=shuf([...segs]);
     }
     const picked=[]; let firstTry=true; let done=false;
     body.innerHTML=`<div class="center" style="font-size:64px;margin:6px 0">${t.e}</div>
@@ -943,14 +951,33 @@ const MIN_PAIRS=[
  {a:{w:"sock",e:"🧦"},b:{w:"rock",e:"🪨"}},
 ];
 function startPairs(){
-  /* minimal pairs only work as pairs: select whole pairs, due pairs first */
+  /* minimal pairs only work as pairs: select whole pairs, due pairs first.
+     Adaptive: the done screen promises "next round adjusts to you", and every
+     round records fe_adapt.pairs -- but the bank never read it back, so a
+     struggling child's next round looked exactly like a confident child's
+     (a write-only signal). Now the signal is read at this single construction
+     site: after a struggling round (2+ misses) the bank is need-ordered --
+     due/learning pairs first, and among them the pairs the child is actively
+     failing (high consecErr) first -- instead of shuffled. A confident round
+     (0 misses) or a fresh history keeps the varied due-first shuffle. */
   const s=loadSRS(), now=Date.now();
-  const score=p=>{ const rs=[p.a.w,p.b.w].map(w=>s[w]);
-    return (rs.some(r=>r&&r.due<=now)?2:0)+(rs.some(r=>!r||!r.h||r.h.length<3)?1:0); };
-  const byScore={};
-  MIN_PAIRS.forEach(p=>{ const sc=score(p); (byScore[sc]=byScore[sc]||[]).push(p); });
-  const pairs=[];
-  [3,2,1,0].forEach(sc=>{ const g=byScore[sc]; if(g) pairs.push(...[...g].sort(()=>Math.random()-.5)); });
+  const rec=w=>s[w]||{};
+  /* need = the old due(2)+learning(1) score, plus a capped struggle bonus so
+     actively-failing pairs sort first without ever crossing a score group */
+  const need=p=>{ const rs=[rec(p.a.w),rec(p.b.w)];
+    return (rs.some(r=>r.due&&r.due<=now)?2:0)
+         + (rs.some(r=>!r.h||r.h.length<3)?1:0)
+         + Math.min(0.9,Math.max((+rs[0].consecErr)||0,(+rs[1].consecErr)||0)/10); };
+  const ag=adaptGet(), lastMiss=(ag.pairs===undefined?1:ag.pairs);
+  let pairs;
+  if(lastMiss>=2){
+    pairs=[...MIN_PAIRS].sort((p,q)=>need(q)-need(p)); /* stable: ties keep MIN_PAIRS order */
+  }else{
+    const byScore={};
+    MIN_PAIRS.forEach(p=>{ const sc=Math.floor(need(p)); (byScore[sc]=byScore[sc]||[]).push(p); });
+    pairs=[];
+    [3,2,1,0].forEach(sc=>{ const g=byScore[sc]; if(g) pairs.push(...shuf([...g])); });
+  }
   const bank=[], pairOf={};
   pairs.slice(0,3).forEach(p=>{ bank.push(p.a,p.b); pairOf[p.a.w]=p.b.w; pairOf[p.b.w]=p.a.w; });
   startQuiz({bank,kind:"pairs",pairOf});
@@ -1022,7 +1049,7 @@ function adaptivePool(bank,kind){
   /* research-backed mix: ~70% due review, ~20% new, ~10% challenge;
      next-round difficulty from last round's mistakes: 0->harder, 1->same, 2+->easier */
   if(!bank||!bank.length) return [];
-  const sh=a=>[...a].sort(()=>Math.random()-.5);
+  const sh=a=>shuf([...a]);
   const s=loadSRS(), now=Date.now();
   const due=bank.filter(w=>{ const r=s[w.w]; return r&&r.due<=now; });
   const learning=bank.filter(w=>{ const r=s[w.w]; return !r||!r.h||r.h.length<3; });
@@ -1074,7 +1101,7 @@ function startQuiz(cfg){
      replay can never lose fields (pairOf, kind) again. */
   if(!cfg||!cfg.bank||!cfg.bank.length) return; /* implicit non-empty contract, now explicit */
   const bank=cfg.bank, kind=cfg.kind, pairOf=cfg.pairOf||null;
-  qz={config:{bank,kind,pairOf}, bank, kind, pairOf, pool:[...bank].sort(()=>Math.random()-.5).slice(0,Math.min(6,bank.length)),idx:0,stars:0,firstTry:true,target:null};
+  qz={config:{bank,kind,pairOf}, bank, kind, pairOf, pool:shuf([...bank]).slice(0,Math.min(6,bank.length)),idx:0,stars:0,firstTry:true,target:null};
   renderQuizQ(); show("s-quiz");
 }
 function renderQuizQ(){
@@ -1082,12 +1109,12 @@ function renderQuizQ(){
   let others;
   if(qz.pairOf && qz.pairOf[target.w]){
     const partner=qz.bank.find(x=>x.w===qz.pairOf[target.w]);
-    const rest=[...qz.bank].filter(x=>x.w!==target.w&&x!==partner).sort(()=>Math.random()-.5);
+    const rest=shuf([...qz.bank].filter(x=>x.w!==target.w&&x!==partner));
     others=[...(partner?[partner]:[]),...rest].slice(0,3);
   }else{
-    others=[...qz.bank].filter(x=>x.w!==target.w).sort(()=>Math.random()-.5).slice(0,3);
+    others=shuf([...qz.bank].filter(x=>x.w!==target.w)).slice(0,3);
   }
-  const opts=[target,...others].sort(()=>Math.random()-.5);
+  const opts=shuf([target,...others]);
   $("#qzOwl").textContent="Tap the word you hear! 👂";
   $("#qzBody").innerHTML=`<div class="center"><span class="note">${qz.idx+1} of ${qz.pool.length}</span>
     &nbsp;<span style="font-size:20px">${"⭐".repeat(qz.stars)}</span></div>
@@ -1159,9 +1186,9 @@ function speakGrade(heard,target,mode){
 function startSpeak(){
   const seen={}, words=[];
   SIGHT_WORDS.concat(...MIN_PAIRS.map(p=>[p.a,p.b])).forEach(x=>{ if(x.e&&!seen[x.w]){ seen[x.w]=1; words.push(x); } });
-  const wpool=[...words].sort(()=>Math.random()-.5).slice(0,3).map(x=>({t:x.w,k:x.w,e:x.e,word:x.w}));
-  const spool=[...SPEAK_SENTENCES].sort(()=>Math.random()-.5).slice(0,3);
-  spk={pool:[...wpool,...spool].sort(()=>Math.random()-.5),idx:0,stars:0,firstTry:true,target:null,rec:null,listening:false};
+  const wpool=shuf([...words]).slice(0,3).map(x=>({t:x.w,k:x.w,e:x.e,word:x.w}));
+  const spool=shuf([...SPEAK_SENTENCES]).slice(0,3);
+  spk={pool:shuf([...wpool,...spool]),idx:0,stars:0,firstTry:true,target:null,rec:null,listening:false};
   $("#spkOwl").textContent="Say it out loud! 🎙️";
   renderSpeakQ(); show("s-speak");
 }
