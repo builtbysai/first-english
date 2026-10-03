@@ -1410,6 +1410,15 @@ $("#spkSpeak").onclick=()=>say($("#spkOwl").textContent);
 $("#qzBack").onclick=()=>{ qz=null; renderHome(); show("s-home"); };
 $("#qzSpeak").onclick=()=>{ if(qz&&qz.target) say("Find: "+qz.target.w); };
 $("#owlSpeak").onclick=()=>say($("#owlText").textContent);
+/* Tab hide / app background (screen lock, app switch, phone call): the child
+   is no longer in front of the device, so stop talking and listening into it.
+   Every in-app exit already tears these down (the v54 contract); backgrounding
+   was the last route that left the mic live and speech queued. Round state
+   (qz/spk/talk) is intentionally kept and screenSeq is NOT bumped, so pending
+   advance timers still fire and the child returns to a live round. */
+function onPageHidden(){ stopSay(); stopSpeakRec(); stopTalkRec(); }
+document.addEventListener("visibilitychange",()=>{ if(document.hidden) onPageHidden(); });
+window.addEventListener("pagehide",onPageHidden);
 /* parent gate: press & hold */
 const gate=$("#gate");
 /* parent gate v2: press & hold with visible progress (kids stay out, grown-ups get in) */
