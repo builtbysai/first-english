@@ -10,209 +10,504 @@
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});}</script>
 <title>First English: from your first sound to your first story</title>
 <style>
+/* ============ First English: storybook edition ============ */
+@font-face{font-family:'Fredoka';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/Fredoka-400.woff2') format('woff2');}
+@font-face{font-family:'Fredoka';font-style:normal;font-weight:500;font-display:swap;src:url('assets/fonts/Fredoka-500.woff2') format('woff2');}
+@font-face{font-family:'Fredoka';font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/Fredoka-600.woff2') format('woff2');}
+@font-face{font-family:'Fredoka';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/Fredoka-700.woff2') format('woff2');}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/Nunito-400.woff2') format('woff2');}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/Nunito-600.woff2') format('woff2');}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/Nunito-700.woff2') format('woff2');}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:800;font-display:swap;src:url('assets/fonts/Nunito-800.woff2') format('woff2');}
 :root{
-  --cream:#fff8ee; --paper:#fffdf8; --ink:#33302a; --muted:#8a8474;
-  --coral:#ff6f61; --teal:#1f9e8e; --sun:#ffc93c; --sky:#7ec8e3; --lilac:#b388eb;
-  --radius:24px; --shadow:0 4px 18px rgba(51,48,42,.10);
-  /* single content-column width shared by main, hero content, and floating
-     buttons, so the layout stays aligned at every viewport width */
+  --paper:#fdf6e9; --card:#fffdf8; --ink:#3d3225; --muted:#8d7f6a;
+  --coral:#ef6351; --coral-deep:#d14f3e; --honey:#ffb627; --honey-deep:#e09a12;
+  --leaf:#35a086; --leaf-deep:#257a66; --sky:#5fb4d9; --sky-deep:#3f8fb3;
+  --lilac:#a58bd4; --blush:#ffe8d8;
+  --r-card:20px; --r-btn:16px; --r-pill:999px; --r-tile:14px;
+  --shadow:0 3px 0 rgba(61,50,37,.08), 0 10px 24px rgba(61,50,37,.08);
   --colw:720px;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-body{margin:0; background:var(--cream); color:var(--ink);
-  font-family:ui-rounded,"SF Pro Rounded","Hiragino Maru Gothic ProN",system-ui,-apple-system,"Segoe UI",sans-serif;
-  min-height:100vh; padding-bottom:40px;}
-header.hero{background:linear-gradient(160deg,#ff9a8b,#ff6f61 55%,#f8574a); color:#fff;
-  padding:26px 20px 30px; border-radius:0 0 34px 34px; text-align:center; box-shadow:var(--shadow);}
-header.hero .heroin{max-width:var(--colw); margin:0 auto; padding:0 14px;}
-header.hero h1{margin:0; font-size:30px; letter-spacing:.5px;}
-/* narrow phones: the fixed parent-gate gear sits over the hero's right side;
-   shrink the title so the centered text clears it (320px: 16px overlap -> 0) */
-@media(max-width:360px){ header.hero h1{font-size:24px;} }
-header.hero p{margin:6px 0 0; font-size:15px; opacity:.95;}
+body{margin:0; background:var(--paper); color:var(--ink);
+  font-family:'Nunito',system-ui,-apple-system,"Segoe UI",sans-serif;
+  min-height:100vh; padding-bottom:40px; font-size:16px; line-height:1.5;}
+h1,h2,h3,.fred{font-family:'Fredoka','Nunito',system-ui,sans-serif; letter-spacing:.2px;}
+/* ---------- icon system ---------- */
+.ic{width:1.25em; height:1.25em; vertical-align:-.28em; flex:0 0 auto;}
+.ic.lg{width:1.7em; height:1.7em;}
+.ic.xl{width:56px; height:56px;}
+button .ic, .btn .ic{vertical-align:-.3em;}
+/* ---------- hero: storybook sky ---------- */
+header.hero{position:relative; overflow:hidden; color:#fff; text-align:center;
+  padding:34px 20px 44px; border-radius:0 0 28px 28px;
+  background:linear-gradient(180deg,#ff8f6b 0%,#f0715a 60%,#e85f4c 100%);}
+header.hero .sky{position:absolute; inset:0; pointer-events:none;}
+header.hero .heroin{position:relative; max-width:var(--colw); margin:0 auto; padding:0 14px;}
+header.hero h1{margin:10px 0 0; font-size:34px; font-weight:700; text-shadow:0 2px 0 rgba(0,0,0,.08);}
+header.hero h1 .ic{width:1.1em; height:1.1em; vertical-align:-.15em;}
+header.hero p{margin:8px 0 0; font-size:16px; font-weight:600; opacity:.96;}
+@media(max-width:360px){ header.hero h1{font-size:27px;} }
+/* Ollie badge in hero */
+.ollie-badge{width:84px; height:84px; margin:0 auto; background:#fffdf8; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 4px 0 rgba(0,0,0,.10);}
+.ollie-badge svg{width:64px; height:64px;}
 main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
-/* wide screens: let the column breathe instead of stranding content mid-page */
 @media(min-width:1100px){ :root{ --colw:980px; } }
 .screen{display:none;} .screen.on{display:block; animation:pop .3s ease;}
 @keyframes pop{from{opacity:0; transform:translateY(10px) scale(.99);} to{opacity:1; transform:none;}}
+/* ---------- Ollie guide row ---------- */
 .owlrow{display:flex; align-items:flex-end; gap:10px; margin:6px 2px 14px;}
-.owl{font-size:52px; flex:0 0 auto; filter:drop-shadow(0 3px 4px rgba(0,0,0,.15));}
-.bubble{background:#fff; border-radius:18px 18px 18px 4px; padding:12px 16px; font-size:18px; font-weight:700;
-  box-shadow:var(--shadow); position:relative; flex:1; display:flex; align-items:center; gap:10px;}
-.bubble .spk{flex:0 0 auto; border:0; background:var(--sun); width:46px; height:46px; border-radius:50%;
-  font-size:22px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.15);}
-.bubble .spk:active{transform:scale(.92);}
-.card{background:var(--paper); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; margin:0 0 16px;}
-.card h2{margin:0 0 4px; font-size:22px;}
+.owl{flex:0 0 auto; width:64px; height:64px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.15));}
+.owl svg{width:100%; height:100%;}
+.bubble{background:#fff; border-radius:18px 18px 18px 6px; padding:12px 16px; font-size:17px; font-weight:700;
+  box-shadow:var(--shadow); position:relative; flex:1; display:flex; align-items:center; gap:10px;
+  border:2px solid #f3e7cf;}
+.bubble .spk{flex:0 0 auto; border:0; background:var(--honey); width:46px; height:46px; border-radius:50%;
+  cursor:pointer; box-shadow:0 3px 0 var(--honey-deep); display:flex; align-items:center; justify-content:center; color:#5b3d00;}
+.bubble .spk .ic{width:22px; height:22px;}
+.bubble .spk:active{transform:translateY(2px); box-shadow:none;}
+/* ---------- cards & sections ---------- */
+.card{background:var(--card); border-radius:var(--r-card); box-shadow:var(--shadow); padding:20px; margin:0 0 16px;
+  border:2px solid #f5ead2;}
+.card h2{margin:0 0 4px; font-size:23px; font-weight:600; display:flex; align-items:center; gap:10px;}
+.card h2 .ic{width:30px; height:30px; color:var(--coral);}
 .note{color:var(--muted); font-size:14px; line-height:1.45;}
-.lvlgrid{display:grid; grid-template-columns:1fr; gap:14px;}
-.lvl{display:flex; align-items:center; gap:16px; background:var(--paper); border-radius:var(--radius);
-  box-shadow:var(--shadow); padding:18px; cursor:pointer; border:3px solid transparent; text-align:left; width:100%; font:inherit;}
+.sect-label{font-family:'Fredoka'; font-size:13px; font-weight:600; letter-spacing:2px; text-transform:uppercase;
+  color:var(--coral-deep); margin:0 0 8px;}
+/* ---------- level journey ---------- */
+.lvlgrid{display:grid; grid-template-columns:1fr; gap:14px; position:relative;}
+.lvl{display:flex; align-items:center; gap:16px; background:var(--card); border-radius:var(--r-card);
+  box-shadow:var(--shadow); padding:16px 18px; cursor:pointer; border:2px solid #f5ead2;
+  text-align:left; width:100%; font:inherit; color:inherit; position:relative;}
 .lvl:not(.lock):active{transform:scale(.98);}
-.lvl .em{font-size:44px; letter-spacing:2px;}
-.lvl .nm{font-size:20px; font-weight:800;}
-.lvl .ds{font-size:14px; color:var(--muted);}
-.lvl .st{margin-left:auto; font-size:22px; white-space:nowrap;}
-.lvl.lock{opacity:.55; cursor:not-allowed;}
-.lvl.l1{border-color:#ffd9d3;} .lvl.l2{border-color:#cdeee9;} .lvl.l3{border-color:#ffe9b8;}
-.lvl.l4{border-color:#d9c8ff;} .lvl.l5{border-color:#bfe3ff;} .lvl.l6{border-color:#ffc4d6;} .lvl.l7{border-color:#c4f0ff;}
-.l8{border-color:#c9f2d8;} .l9{border-color:#ead9f0;}
+.lvl .chap{flex:0 0 auto; width:52px; height:52px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+  font-family:'Fredoka'; font-size:24px; font-weight:700; color:#fff; box-shadow:inset 0 -3px 0 rgba(0,0,0,.12);}
+.lvl.l1 .chap{background:#ef6351;} .lvl.l2 .chap{background:#35a086;} .lvl.l3 .chap{background:#e8a100;}
+.lvl.l4 .chap{background:#a58bd4;} .lvl.l5 .chap{background:#5fb4d9;} .lvl.l6 .chap{background:#ef7fa8;}
+.lvl.l7 .chap{background:#4da6ff;} .lvl.l8 .chap{background:#43b581;} .lvl.l9 .chap{background:#b07cc6;}
+.lvl .em{font-size:40px; letter-spacing:2px; display:flex; gap:4px;}
+.lvl .em .sticker{background:#fff; border:2px solid #f3e7cf; border-radius:var(--r-tile); width:56px; height:56px;
+  display:flex; align-items:center; justify-content:center; font-size:34px; box-shadow:0 2px 0 rgba(61,50,37,.06);}
+.lvl .nm{font-family:'Fredoka'; font-size:20px; font-weight:600;}
+.lvl .ds{font-size:14px; color:var(--muted); font-weight:600;}
+.lvl .st{margin-left:auto; display:flex; gap:2px; color:var(--honey-deep);}
+.lvl .st .ic{width:26px; height:26px;}
+.lvl .st .lockic{color:#b7a88d;}
+.lvl .st .lockic .ic{width:26px; height:26px;}
+.lvl.lock{opacity:.6; cursor:not-allowed;}
+.lvl.done{border-color:#cde9c2;}
+.lvl .youare{position:absolute; top:-11px; right:14px; background:var(--leaf); color:#fff; font-size:11px; font-weight:800;
+  letter-spacing:1px; text-transform:uppercase; padding:3px 10px; border-radius:var(--r-pill);}
+/* ---------- sight words ---------- */
 .sightcard h2{margin:0 0 4px;}
 .setpills{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
-.setpill{border:2px solid #ffd9a8; background:#fff; border-radius:999px; padding:6px 14px; min-height:44px; font-size:14px; font-weight:700; color:#b06a2a; cursor:pointer;}
+.setpill{border:2px solid #ffd9a8; background:#fff; border-radius:var(--r-pill); padding:6px 14px; min-height:44px;
+  font-family:'Fredoka'; font-size:14px; font-weight:600; color:#b06a2a; cursor:pointer;}
 .setpill.on{background:#ff9d5c; border-color:#ff9d5c; color:#fff;}
 .sightgrid{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
-.qzbtn.hint{animation:hintpulse 1s ease-in-out 3; border-color:#2e7d32;}
-.micbtn{width:96px;height:96px;border-radius:50%;border:none;font-size:44px;background:#fff;box-shadow:var(--shadow);cursor:pointer;}
-.micbtn.live{background:#ff6f61;animation:hintpulse 1.2s ease-in-out infinite;}
-.spkheard{min-height:28px;color:var(--muted);font-style:italic;margin-top:8px;}
-.spkword{font-size:40px;font-weight:800;margin:6px 0;}
-@keyframes hintpulse{0%,100%{box-shadow:0 0 0 0 rgba(46,125,50,.0);}50%{box-shadow:0 0 0 6px rgba(46,125,50,.35);}}
-.sw{border:2px solid var(--sky); background:#fff; border-radius:16px; padding:10px 16px;
-  font:inherit; cursor:pointer; display:flex; align-items:center; gap:8px;
-  box-shadow:var(--shadow);}
+.sw{border:2px solid #cfe8f5; background:#fff; border-radius:16px; padding:10px 16px;
+  font:inherit; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 2px 0 rgba(61,50,37,.06);}
 .sw:active{transform:scale(.96);}
-.sw .sww{font-size:20px; font-weight:800; color:var(--ink);}
+.sw .sww{font-family:'Fredoka'; font-size:20px; font-weight:600; color:var(--ink);}
+.sw .swe{font-size:24px;}
+.sw .spkcue{color:#9db3bd; display:flex;}
+.sw .spkcue .ic{width:18px; height:18px;}
+/* quiz buttons reuse .sw */
 .qzgrid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;}
 .qzbtn{font-size:22px; padding:20px 10px; justify-content:center;}
 .qzbtn .sww{font-size:26px;}
 .qzbtn.right{border-color:#3d9a3d; background:#e2f2e2; animation:pop .45s;}
 .qzbtn.wrong{border-color:#c0392b; background:#fbe3dc; animation:shake .4s;}
+.qzbtn.hint{animation:hintpulse 1s ease-in-out 3; border-color:#2e7d32;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
 .qzdone{text-align:center; padding:26px 8px;}
-.qzdone .big{font-size:64px;}
-.qzdone h2{margin:10px 0 18px;}
-.sw .swe{font-size:24px;}
-.sw .spkcue{font-size:17px; opacity:.72;}
+.qzdone .big{display:flex; justify-content:center; color:var(--honey-deep);}
+.qzdone .big .ic{width:72px; height:72px;}
+.qzdone h2{margin:10px 0 18px; font-size:26px;}
+/* ---------- step tabs ---------- */
 .steptabs{display:flex; gap:8px; margin:0 0 16px; overflow-x:auto; padding-bottom:4px;}
 .steptabs::-webkit-scrollbar{display:none;}
-.stab{flex:1 0 auto; border:0; border-radius:16px; padding:10px 14px; min-height:44px; font:inherit; font-weight:800; font-size:15px;
-  background:#fff; color:var(--muted); cursor:pointer; box-shadow:var(--shadow); white-space:nowrap;}
+.stab{flex:1 0 auto; border:0; border-radius:16px; padding:10px 14px; min-height:44px;
+  font-family:'Fredoka'; font-weight:600; font-size:15px; background:#fff; color:var(--muted);
+  cursor:pointer; box-shadow:var(--shadow); white-space:nowrap; display:flex; align-items:center; gap:8px; justify-content:center;}
+.stab .ic{width:20px; height:20px;}
 .stab.on{color:#fff;}
-.stab.on.s1{background:var(--coral);} .stab.on.s2{background:var(--teal);}
+.stab.on.s1{background:var(--coral);} .stab.on.s2{background:var(--leaf);}
 .stab.on.s3{background:#e8a100;} .stab.on.s4{background:var(--lilac);}
 .stab.on.s5{background:#4da6ff;}
+/* ---------- letter cards ---------- */
 .lettergrid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
-.lcard{background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:16px 8px; text-align:center; cursor:pointer; border:0; font:inherit;}
+.lcard{background:#fff; border-radius:var(--r-card); box-shadow:var(--shadow); padding:16px 8px;
+  text-align:center; cursor:pointer; border:2px solid #f5ead2; font:inherit; color:inherit;}
 .lcard:active{transform:scale(.95);}
-.lcard .L{font-size:52px; font-weight:900; color:var(--coral); line-height:1;}
-.lcard .E{font-size:44px; margin:6px 0 2px;}
-.lcard .W{font-size:16px; font-weight:700;}
-.lcard .spkmini{display:inline-block; margin-top:10px; border:0; background:var(--sun); border-radius:999px; padding:8px 14px; font-size:15px; font-weight:800; cursor:pointer;}
+.lcard .L{font-family:'Fredoka'; font-size:52px; font-weight:700; color:var(--coral); line-height:1;}
+.lcard .E{font-size:42px; margin:8px 0 2px; background:#fff; display:inline-block;
+  border:2px solid #f3e7cf; border-radius:var(--r-tile); width:72px; height:72px; line-height:68px;
+  box-shadow:0 2px 0 rgba(61,50,37,.06);}
+.lcard .W{font-size:16px; font-weight:700; font-family:'Fredoka';}
+.lcard .spkmini{display:inline-flex; align-items:center; gap:6px; margin-top:10px; border:0; background:var(--honey);
+  border-radius:var(--r-pill); padding:8px 14px; font-family:'Fredoka'; font-size:14px; font-weight:600;
+  cursor:pointer; color:#5b3d00; box-shadow:0 3px 0 var(--honey-deep);}
+.lcard .spkmini:active{transform:translateY(2px); box-shadow:none;}
+/* ---------- choices / games ---------- */
 .choices{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:6px;}
 .choice{background:#fff; border:4px solid transparent; border-radius:22px; box-shadow:var(--shadow);
-  font-size:56px; padding:22px 6px; cursor:pointer; transition:transform .12s;}
+  font-size:52px; padding:20px 6px; cursor:pointer; transition:transform .12s; color:inherit;}
 .choice:active{transform:scale(.94);}
-.choice.right{border-color:var(--teal); background:#e6faf6; animation:joy .5s;}
+.choice.right{border-color:var(--leaf); background:#e6faf6; animation:joy .5s;}
 .choice.wrong{animation:wob .4s;}
 @keyframes joy{0%{transform:scale(1);}40%{transform:scale(1.12) rotate(-4deg);}100%{transform:scale(1);}}
 @keyframes wob{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
 .bigword{background:#fff; border-radius:22px; box-shadow:var(--shadow); text-align:center;
-  padding:26px 12px; margin:6px 0 16px;}
-.bigword .w{font-size:52px; font-weight:900; letter-spacing:6px; color:var(--ink);}
-.bigword .spk{margin-top:12px; border:0; background:var(--sun); border-radius:999px; padding:12px 26px;
-  font-size:18px; font-weight:800; cursor:pointer;}
+  padding:26px 12px; margin:6px 0 16px; border:2px solid #f5ead2;}
+.bigword .w{font-family:'Fredoka'; font-size:52px; font-weight:700; letter-spacing:6px; color:var(--ink);}
+.bigword .spk{margin-top:12px; border:0; background:var(--honey); border-radius:var(--r-pill); padding:12px 26px;
+  font-family:'Fredoka'; font-size:18px; font-weight:600; cursor:pointer; color:#5b3d00;
+  box-shadow:0 3px 0 var(--honey-deep); display:inline-flex; align-items:center; gap:10px;}
+.bigword .spk:active{transform:translateY(2px); box-shadow:none;}
+/* ---------- spelling tiles ---------- */
 .tiles{display:flex; gap:10px; justify-content:center; margin:4px 0 14px; flex-wrap:wrap;}
-.tile{width:64px; height:72px; border-radius:16px; background:var(--navy,#1b2f4b); color:#fff;
-  font-size:36px; font-weight:900; display:flex; align-items:center; justify-content:center; cursor:pointer;
-  box-shadow:var(--shadow); border:0;}
-.tile.lit{background:var(--teal); transform:scale(1.08);}
+.tile{width:64px; height:72px; border-radius:16px; background:#3d4c63; color:#fff;
+  font-family:'Fredoka'; font-size:36px; font-weight:700; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow:0 4px 0 #2b3648; border:0;}
+.tile.lit{background:var(--leaf); transform:scale(1.08); box-shadow:0 4px 0 var(--leaf-deep);}
 .tile.used{opacity:0.25; transform:scale(0.95);}
-.story{background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:18px; margin:0 0 12px;
-  display:flex; align-items:center; gap:14px;}
-.story .se{font-size:48px;}
-.story .st2{font-size:20px; font-weight:700; flex:1;}
-.story .spk{border:0; background:var(--sun); width:52px; height:52px; border-radius:50%; font-size:24px; cursor:pointer; flex:0 0 auto;}
+/* ---------- story ---------- */
+.story{background:#fff; border-radius:var(--r-card); box-shadow:var(--shadow); padding:18px; margin:0 0 12px;
+  display:flex; align-items:center; gap:14px; border:2px solid #f5ead2;}
+.story .se{font-size:44px; background:#fff; border:2px solid #f3e7cf; border-radius:var(--r-tile);
+  width:76px; height:76px; display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+  box-shadow:0 2px 0 rgba(61,50,37,.06);}
+.story .st2{font-size:19px; font-weight:700; flex:1; font-family:'Fredoka'; font-weight:500;}
+.story .spk{border:0; background:var(--honey); width:52px; height:52px; border-radius:50%; cursor:pointer;
+  flex:0 0 auto; display:flex; align-items:center; justify-content:center; color:#5b3d00; box-shadow:0 3px 0 var(--honey-deep);}
+.story .spk .ic{width:24px; height:24px;}
+.story .spk:active{transform:translateY(2px); box-shadow:none;}
+/* ---------- starscreens / celebrations ---------- */
 .starscreen{text-align:center; padding:30px 10px;}
-.starscreen .big{font-size:76px; animation:joy .8s;}
-.starscreen h2{font-size:28px; margin:10px 0;}
-.btn{border:0; border-radius:18px; padding:16px 30px; font:inherit; font-size:19px; font-weight:800;
-  cursor:pointer; background:var(--teal); color:#fff; box-shadow:var(--shadow); margin:6px;}
-.btn.coral{background:var(--coral);} .btn.ghost{background:#fff; color:var(--ink);}
-.btn.gold{background:linear-gradient(180deg,#ffd873,#f0b73e); color:#6b4a00;}
-.btn.big{font-size:21px; padding:18px 26px;}
-.pill-row{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:14px 0;}
-.btn:active{transform:scale(.96);}
+.starscreen .big{display:flex; justify-content:center; color:var(--honey-deep); margin-bottom:6px;}
+.starscreen .big .ic{width:84px; height:84px;}
+.starscreen h2{font-size:28px; margin:10px 0; font-weight:600;}
+.starscreen .stars{color:var(--honey-deep); display:flex; justify-content:center; gap:4px; margin:8px 0;}
+.starscreen .stars .ic{width:34px; height:34px;}
+/* ---------- buttons ---------- */
+.btn{border:0; border-radius:var(--r-btn); padding:15px 28px; font-family:'Fredoka'; font-size:18px; font-weight:600;
+  cursor:pointer; background:var(--leaf); color:#fff; box-shadow:0 4px 0 var(--leaf-deep); margin:6px;
+  display:inline-flex; align-items:center; gap:10px; justify-content:center;}
+.btn.coral{background:var(--coral); box-shadow:0 4px 0 var(--coral-deep);}
+.btn.ghost{background:#fff; color:var(--ink); box-shadow:0 4px 0 #e3d5b8;}
+.btn.gold{background:var(--honey); box-shadow:0 4px 0 var(--honey-deep); color:#5b3d00;}
+.btn:active{transform:translateY(3px); box-shadow:none;}
 .center{text-align:center;}
 .backrow{margin:0 0 12px;}
-.backbtn{border:0; background:#fff; border-radius:999px; padding:10px 18px; min-height:44px; font:inherit; font-weight:800;
-  box-shadow:var(--shadow); cursor:pointer; font-size:15px; color:var(--muted);}
-.together{background:#f6f4ff;border:2px solid #c9bdf5;border-radius:14px;padding:12px}
-.tchip{display:inline-block;background:#fff;border:2px solid #7c6bd6;border-radius:999px;padding:3px 12px;margin:2px;font-weight:800;color:#4a3d9e}
+.backbtn{border:0; background:#fff; border-radius:var(--r-pill); padding:10px 18px; min-height:44px;
+  font-family:'Fredoka'; font-weight:600; box-shadow:0 3px 0 #e3d5b8; cursor:pointer; font-size:15px;
+  color:var(--muted); display:inline-flex; align-items:center; gap:8px;}
+.backbtn:active{transform:translateY(2px); box-shadow:none;}
+/* ---------- mic / speak ---------- */
+.micbtn{width:96px;height:96px;border-radius:50%;border:none;background:#fff;box-shadow:var(--shadow);
+  cursor:pointer; color:var(--coral); display:inline-flex; align-items:center; justify-content:center;}
+.micbtn .ic{width:44px; height:44px;}
+.micbtn.live{background:var(--coral); color:#fff; animation:hintpulse 1.2s ease-in-out infinite;}
+.spkheard{min-height:28px;color:var(--muted);font-style:italic;margin-top:8px;}
+.spkword{font-family:'Fredoka'; font-size:40px;font-weight:700;margin:6px 0;}
+@keyframes hintpulse{0%,100%{box-shadow:0 0 0 0 rgba(46,125,50,.0);}50%{box-shadow:0 0 0 6px rgba(46,125,50,.35);}}
+/* ---------- parent gate ---------- */
 .gate{position:fixed; top:14px; right:max(14px, calc((100vw - var(--colw))/2 + 14px)); z-index:60; border:0; --p:0;
-  background:conic-gradient(#7c6bd6 calc(var(--p)*1%), rgba(255,255,255,.85) 0);
-  border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:var(--shadow);
+  background:conic-gradient(#a58bd4 calc(var(--p)*1%), rgba(255,255,255,.92) 0);
+  border-radius:50%; width:44px; height:44px; cursor:pointer; box-shadow:var(--shadow); color:#6b5b8f;
+  display:flex; align-items:center; justify-content:center;
   touch-action:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none;}
-.gatehint{position:fixed; top:66px; right:max(10px, calc((100vw - var(--colw))/2 + 10px)); z-index:80; background:#33302a; color:#fff; font-size:13px;
-  padding:8px 12px; border-radius:10px; opacity:0; transform:translateY(-4px);
-  transition:opacity .25s, transform .25s; pointer-events:none; max-width:230px; text-align:center;}
+.gate .ic{width:22px; height:22px;}
+.gatehint{position:fixed; top:66px; right:max(10px, calc((100vw - var(--colw))/2 + 10px)); z-index:80;
+  background:#3d3225; color:#fff; font-size:13px; padding:8px 12px; border-radius:10px; opacity:0;
+  transform:translateY(-4px); transition:opacity .25s, transform .25s; pointer-events:none; max-width:230px;
+  text-align:center; display:flex; align-items:center; gap:6px;}
 .gatehint.on{opacity:1; transform:none;}
-.sheet{position:fixed; inset:0; z-index:70; background:rgba(51,48,42,.5); display:none; align-items:flex-end; justify-content:center;}
+.sheet{position:fixed; inset:0; z-index:70; background:rgba(61,50,37,.5); display:none; align-items:flex-end; justify-content:center;}
 .sheet.on{display:flex;}
+.sheetin{background:var(--card); border-radius:28px 28px 0 0; padding:24px 20px calc(30px + env(safe-area-inset-bottom));
+  width:100%; max-width:560px; max-height:92dvh; overflow-y:auto; overscroll-behavior:contain;}
+.sheetin h2{margin:0 0 10px; font-size:24px; display:flex; align-items:center; gap:10px;}
+.sheetin h2 .ic{color:#6b5b8f;}
+.sheetin p{color:var(--muted); font-size:14.5px; margin:9px 0;}
+.sheetin p b{color:var(--ink);}
+.sheetin .btn{width:100%; margin:8px 0;}
 .pgrid{display:flex; flex-direction:column; gap:4px;}
 .prow{display:flex; justify-content:space-between; align-items:center; padding:7px 10px; background:#faf6ee; border-radius:10px; font-size:14px;}
 .prow .pnote{color:#8a7f70; font-weight:400; font-size:12px;}
-.pstars{letter-spacing:1px;}
-.pgrad{background:#eef7e8; border-radius:10px; padding:8px 10px; margin-top:8px; font-weight:800; text-align:center;}
-.pfoot{margin-top:8px; font-size:13px; color:#6b6257; text-align:center;}
-#grad{position:fixed; inset:0; z-index:80; background:rgba(51,48,42,.55); display:none; align-items:center; justify-content:center; padding:24px;}
+.pstars{letter-spacing:1px; color:var(--honey-deep); display:inline-flex; gap:1px;}
+.pstars .ic{width:16px; height:16px;}
+.pgrad{background:#eef7e8; border-radius:10px; padding:8px 10px; margin-top:8px; font-weight:800; text-align:center;
+  display:flex; align-items:center; justify-content:center; gap:8px; color:#2e7d32;}
+.pfoot{margin-top:8px; font-size:13px; color:#6b6257; text-align:center; display:flex; align-items:center;
+  justify-content:center; gap:6px; flex-wrap:wrap;}
+#grad{position:fixed; inset:0; z-index:80; background:rgba(61,50,37,.55); display:none; align-items:center; justify-content:center; padding:24px;}
 #grad.on{display:flex;}
-.gradin{background:#fffdf7; border-radius:28px; padding:36px 28px; text-align:center; max-width:380px; box-shadow:0 20px 60px rgba(0,0,0,.25); animation:pop .5s;}
-.gradin .big{font-size:72px;}
+.gradin{background:#fffdf7; border-radius:28px; padding:36px 28px; text-align:center; max-width:380px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25); animation:pop .5s;}
+.gradin .big{display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:4px;}
+.gradin .big .ollie-mini{width:72px; height:72px;}
 .gradin h2{margin:12px 0 8px; font-size:26px;}
 .gradin p{color:#6b6257; margin:0 0 20px;}
-.sheetin{background:var(--paper); border-radius:28px 28px 0 0; padding:24px 20px calc(30px + env(safe-area-inset-bottom));
-  width:100%; max-width:560px; max-height:92dvh; overflow-y:auto; overscroll-behavior:contain;}
-/* scroll containment: overlay content grows (Play together etc.) but Close/Reset stay reachable */
-.sheetin h2{margin:0 0 10px;}
-.sheetin p{color:var(--muted); font-size:14.5px; margin:9px 0;}
-.sheetin .btn{width:100%; margin:8px 0;}
-.streak{display:inline-block; background:#fff; border-radius:999px; padding:8px 18px; font-weight:800; box-shadow:var(--shadow); margin-top:10px;}
-@media(min-width:640px){ .lvlgrid{grid-template-columns:1fr 1fr 1fr;} .lvl{flex-direction:column; text-align:center;} .lvl .st{margin:6px 0 0;} }
+.streak{display:inline-flex; align-items:center; gap:8px; background:#fff; border-radius:var(--r-pill);
+  padding:8px 18px; font-family:'Fredoka'; font-weight:600; box-shadow:var(--shadow); margin-top:10px; color:#b06a2a;}
+.streak .ic{color:#ef6351;}
+/* ---------- misc ---------- */
+.together{background:#f6f4ff;border:2px solid #c9bdf5;border-radius:14px;padding:12px}
+.tchip{display:inline-block;background:#fff;border:2px solid #7c6bd6;border-radius:999px;padding:3px 12px;margin:2px;font-weight:800;color:#4a3d9e}
+.pill-row{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:14px 0;}
+@media(min-width:640px){
+  .lvlgrid{grid-template-columns:1fr 1fr 1fr;}
+  .lvl{flex-direction:column; text-align:center; padding:22px 16px;}
+  .lvl .em{order:-1;}
+  .lvl .st{margin:8px 0 0;}
+  .lvl .chap{position:absolute; top:12px; left:12px; width:40px; height:40px; font-size:19px; border-radius:12px;}
+}
+@media(max-width:639px){
+  .lvl{gap:12px; padding:14px;}
+  .lvl .chap{width:44px; height:44px; font-size:20px; border-radius:14px;}
+  .lvl .em .sticker{width:44px; height:44px; font-size:27px;}
+  .lvl .tx{min-width:0; flex:1 1 auto;}
+  .lvl .nm{font-size:18px; white-space:nowrap;}
+  .lvl .ds{font-size:13px;}
+  .lvl .st .ic{width:22px; height:22px;}
+}
 </style>
+
 </head>
 <body>
-<button class="gate" id="gate" aria-label="Grown-ups settings (press and hold)">⚙️</button>
-<div class="gatehint" id="gateHint">🔒 Press &amp; hold the gear to open Grown-ups</div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<!-- Ollie the owl -->
+<symbol id="ollie" viewBox="0 0 100 100">
+  <path d="M28 18 L36 30 L24 28 Z" fill="#7c5233"/>
+  <path d="M72 18 L64 30 L76 28 Z" fill="#7c5233"/>
+  <ellipse cx="50" cy="56" rx="32" ry="36" fill="#9c6b43"/>
+  <ellipse cx="50" cy="66" rx="20" ry="24" fill="#eccb9c"/>
+  <ellipse cx="26" cy="58" rx="8" ry="16" fill="#7c5233"/>
+  <ellipse cx="74" cy="58" rx="8" ry="16" fill="#7c5233"/>
+  <circle cx="38" cy="44" r="13" fill="#fff"/>
+  <circle cx="62" cy="44" r="13" fill="#fff"/>
+  <circle cx="38" cy="46" r="6" fill="#3d3225"/>
+  <circle cx="62" cy="46" r="6" fill="#3d3225"/>
+  <circle cx="40" cy="44" r="2" fill="#fff"/>
+  <circle cx="64" cy="44" r="2" fill="#fff"/>
+  <path d="M46 56 L54 56 L50 62 Z" fill="#e8932f"/>
+  <path d="M42 74 Q50 78 58 74" stroke="#7c5233" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="40" cy="92" rx="7" ry="4" fill="#e8932f"/>
+  <ellipse cx="60" cy="92" rx="7" ry="4" fill="#e8932f"/>
+</symbol>
+<!-- sprout -->
+<symbol id="i-sprout" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M12 21v-8"/>
+    <path d="M12 13c0-4 3-7 8-7 0 4-3 7-8 7z" fill="currentColor" stroke="none" opacity=".85"/>
+    <path d="M12 13c0-4-3-7-8-7 0 4 3 7 8 7z" fill="currentColor" stroke="none" opacity=".55"/>
+  </g>
+</symbol>
+<!-- speaker -->
+<symbol id="i-speaker" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor" stroke="none"/>
+    <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+    <path d="M18.5 5.5a9.5 9.5 0 0 1 0 13"/>
+  </g>
+</symbol>
+<!-- lock -->
+<symbol id="i-lock" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <rect x="5" y="11" width="14" height="9" rx="3" fill="currentColor" stroke="none" opacity=".9"/>
+    <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+  </g>
+</symbol>
+<!-- star -->
+<symbol id="i-star" viewBox="0 0 24 24">
+  <path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.4l6.5-.9z"
+    fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+</symbol>
+<!-- mic -->
+<symbol id="i-mic" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" stroke="none"/>
+    <path d="M5 11a7 7 0 0 0 14 0"/>
+    <path d="M12 18v3"/>
+  </g>
+</symbol>
+<!-- ear -->
+<symbol id="i-ear" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M7 10a5 5 0 0 1 10 0c0 3-2 4-2 7a4 4 0 0 1-8 0"/>
+    <path d="M10 10a2.5 2.5 0 0 1 5 0c0 1.5-1 2-1 3.5"/>
+  </g>
+</symbol>
+<!-- target -->
+<symbol id="i-target" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="9"/>
+    <circle cx="12" cy="12" r="5"/>
+    <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+  </g>
+</symbol>
+<!-- flame -->
+<symbol id="i-flame" viewBox="0 0 24 24">
+  <path d="M12 2.5c.8 4-3.5 6-3.5 10.5a5.5 5.5 0 0 0 11 .5C19.5 9 14 7.5 12 2.5z"
+    fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M12 21.5a3 3 0 0 1-3-3c0-2 2-3 2-5.5 1.5 1.5 4 3 4 5.5a3 3 0 0 1-3 3z" fill="#fff" opacity=".55" stroke="none"/>
+</symbol>
+<!-- home -->
+<symbol id="i-home" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 11l8-7 8 7"/>
+    <path d="M6 9.5V20h12V9.5" />
+  </g>
+</symbol>
+<!-- check -->
+<symbol id="i-check" viewBox="0 0 24 24">
+  <path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<!-- arrow-left -->
+<symbol id="i-arrow-l" viewBox="0 0 24 24">
+  <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<!-- chart -->
+<symbol id="i-chart" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M4 20h16"/>
+    <path d="M7 16v-5M12 16V7M17 16v-8"/>
+  </g>
+</symbol>
+<!-- graduation cap -->
+<symbol id="i-cap" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 4L2 9l10 5 10-5z" fill="currentColor" stroke="none" opacity=".9"/>
+    <path d="M6 11.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5"/>
+    <path d="M22 9v5"/>
+  </g>
+</symbol>
+<!-- eye -->
+<symbol id="i-eye" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/>
+    <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+  </g>
+</symbol>
+<!-- repeat -->
+<symbol id="i-repeat" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 8h13l-3-3M20 16H7l3 3"/>
+  </g>
+</symbol>
+<!-- bulb -->
+<symbol id="i-bulb" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M12 3a6 6 0 0 0-3.5 10.9c.8.6 1.5 1.4 1.5 2.6h4c0-1.2.7-2 1.5-2.6A6 6 0 0 0 12 3z" fill="currentColor" stroke="none" opacity=".85"/>
+    <path d="M10 20h4M10.8 22.5h2.4"/>
+  </g>
+</symbol>
+<!-- book (read) -->
+<symbol id="i-book" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/>
+    <path d="M4 20.5V5.5"/>
+    <path d="M9 8.5h7M9 12h5"/>
+  </g>
+</symbol>
+<!-- pencil (write) -->
+<symbol id="i-pencil" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z" fill="currentColor" stroke="none" opacity=".85"/>
+    <path d="M14.5 6.5l3 3"/>
+  </g>
+</symbol>
+<!-- books (story) -->
+<symbol id="i-books" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zm0 0a2 2 0 0 0 2 2h13"/>
+    <path d="M9 7h7"/>
+  </g>
+</symbol>
+<!-- puzzle (build) -->
+<symbol id="i-puzzle" viewBox="0 0 24 24">
+  <path d="M10 3h4v4h4v4h-4v2a2 2 0 1 0 2 2v4h-4v-2a2 2 0 1 0-4 0v2H8v-4a2 2 0 1 0-2-2v-2h4z"
+    fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</symbol>
+<!-- abc (sounds) -->
+<symbol id="i-abc" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M4 18c-1-4 1-9 4-9 2 0 3 2 3 4.5S10 18 8 18c-1.5 0-2.5-1-3-2.5"/>
+    <path d="M13 18v-9M13 13.5h4a2.5 2.5 0 0 1 0 5h-4"/>
+    <path d="M13 13.5a2.5 2.5 0 0 1 2.5-2.5"/>
+  </g>
+</symbol>
+<!-- gear -->
+<symbol id="i-gear" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12.00,2.20L12.34,2.21L12.68,2.22L13.02,2.25L13.36,2.30L13.58,3.05L13.74,3.81L13.85,4.57L14.01,4.98L14.26,5.06L14.50,5.14L14.73,5.23L14.97,5.33L15.20,5.44L15.43,5.55L15.65,5.68L16.25,5.20L16.88,4.76L17.55,4.36L18.03,4.28L18.30,4.49L18.56,4.72L18.81,4.95L19.05,5.19L19.28,5.44L19.51,5.70L19.72,5.97L19.64,6.45L19.24,7.12L18.80,7.75L18.32,8.35L18.45,8.57L18.56,8.80L18.67,9.03L18.77,9.27L18.86,9.50L18.94,9.74L19.02,9.99L19.43,10.15L20.19,10.26L20.95,10.42L21.70,10.64L21.75,10.98L21.78,11.32L21.79,11.66L21.80,12.00L21.79,12.34L21.78,12.68L21.75,13.02L21.70,13.36L20.95,13.58L20.19,13.74L19.43,13.85L19.02,14.01L18.94,14.26L18.86,14.50L18.77,14.73L18.67,14.97L18.56,15.20L18.45,15.43L18.32,15.65L18.80,16.25L19.24,16.88L19.64,17.55L19.72,18.03L19.51,18.30L19.28,18.56L19.05,18.81L18.81,19.05L18.56,19.28L18.30,19.51L18.03,19.72L17.55,19.64L16.88,19.24L16.25,18.80L15.65,18.32L15.43,18.45L15.20,18.56L14.97,18.67L14.73,18.77L14.50,18.86L14.26,18.94L14.01,19.02L13.85,19.43L13.74,20.19L13.58,20.95L13.36,21.70L13.02,21.75L12.68,21.78L12.34,21.79L12.00,21.80L11.66,21.79L11.32,21.78L10.98,21.75L10.64,21.70L10.42,20.95L10.26,20.19L10.15,19.43L9.99,19.02L9.74,18.94L9.50,18.86L9.27,18.77L9.03,18.67L8.80,18.56L8.57,18.45L8.35,18.32L7.75,18.80L7.12,19.24L6.45,19.64L5.97,19.72L5.70,19.51L5.44,19.28L5.19,19.05L4.95,18.81L4.72,18.56L4.49,18.30L4.28,18.03L4.36,17.55L4.76,16.88L5.20,16.25L5.68,15.65L5.55,15.43L5.44,15.20L5.33,14.97L5.23,14.73L5.14,14.50L5.06,14.26L4.98,14.01L4.57,13.85L3.81,13.74L3.05,13.58L2.30,13.36L2.25,13.02L2.22,12.68L2.21,12.34L2.20,12.00L2.21,11.66L2.22,11.32L2.25,10.98L2.30,10.64L3.05,10.42L3.81,10.26L4.57,10.15L4.98,9.99L5.06,9.74L5.14,9.50L5.23,9.27L5.33,9.03L5.44,8.80L5.55,8.57L5.68,8.35L5.20,7.75L4.76,7.12L4.36,6.45L4.28,5.97L4.49,5.70L4.72,5.44L4.95,5.19L5.19,4.95L5.44,4.72L5.70,4.49L5.97,4.28L6.45,4.36L7.12,4.76L7.75,5.20L8.35,5.68L8.57,5.55L8.80,5.44L9.03,5.33L9.27,5.23L9.50,5.14L9.74,5.06L9.99,4.98L10.15,4.57L10.26,3.81L10.42,3.05L10.64,2.30L10.98,2.25L11.32,2.22L11.66,2.21Z"/>
+    <circle cx="12" cy="12" r="3.2"/>
+  </g>
+</symbol>
+<!-- play -->
+<symbol id="i-play" viewBox="0 0 24 24">
+  <path d="M7 4.5l13 7.5-13 7.5z" fill="currentColor"/>
+</symbol>
+<!-- hand tap -->
+<symbol id="i-tap" viewBox="0 0 24 24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-4.5a1.5 1.5 0 0 1 3 0V10m0-3a1.5 1.5 0 0 1 3 0v6c0 4-2.5 7-6 7-2.5 0-4-1-5.5-3.5L4 12.5c-.8-1 .2-2.4 1.4-1.8L7 11.5"/>
+    <path d="M18.5 3.5l.7-.7M20 6.5h1M18.5 9.5l.7.7" opacity=".6"/>
+  </g>
+</symbol>
+<!-- arrow-right -->
+<symbol id="i-arrow-r" viewBox="0 0 24 24">
+  <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+</defs>
+</svg>
+
+
+<button class="gate" id="gate" aria-label="Grown-ups settings (press and hold)"><svg class="ic" aria-hidden="true"><use href="#i-gear"/></svg></button>
+<div class="gatehint" id="gateHint"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span>Press &amp; hold the gear to open Grown-ups</span></div>
 
 <!-- HOME: level map -->
 <div class="screen on" id="s-home">
-  <header class="hero"><div class="heroin"><h1>🌱 First English</h1><p>from your first sound to your first story</p></div></header>
+  <header class="hero"><svg class="sky" viewBox="0 0 720 190" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g><circle cx="105" cy="62" r="30" fill="#ffdf8a"/><circle cx="105" cy="62" r="44" fill="#ffdf8a" opacity=".25"/></g><g fill="#ffffff" opacity=".9"><ellipse cx="420" cy="46" rx="36" ry="14"/><ellipse cx="452" cy="38" rx="26" ry="12"/></g><g fill="#ffffff" opacity=".7"><ellipse cx="610" cy="120" rx="30" ry="12"/><ellipse cx="634" cy="114" rx="22" ry="10"/></g><path d="M0 150 Q120 110 260 142 T520 138 T720 148 V190 H0 Z" fill="#e2604a" opacity=".55"/><path d="M0 165 Q160 130 340 158 T720 160 V190 H0 Z" fill="#d14f3e" opacity=".7"/></svg><circle cx="600" cy="42" r="30" fill="#ffdf8a"/><circle cx="600" cy="42" r="42" fill="#ffdf8a" opacity=".25"/><g fill="#ffffff" opacity=".85"><ellipse cx="120" cy="40" rx="34" ry="14"/><ellipse cx="150" cy="32" rx="26" ry="12"/><ellipse cx="330" cy="60" rx="40" ry="15"/><ellipse cx="365" cy="52" rx="28" ry="12"/></g><path d="M0 150 Q120 110 260 142 T520 138 T720 148 V190 H0 Z" fill="#e2604a" opacity=".55"/><path d="M0 165 Q160 130 340 158 T720 160 V190 H0 Z" fill="#d14f3e" opacity=".7"/></svg><div class="heroin"><div class="ollie-badge"><svg aria-hidden="true"><use href="#ollie"/></svg></div><h1><svg class="ic" aria-hidden="true"><use href="#i-sprout"/></svg> First English</h1><p>from your first sound to your first story</p></div></header>
   <main>
-    <div class="owlrow"><div class="owl">🦉</div>
-      <div class="bubble"><button class="spk" data-say="Hello! I am Ollie. Tap a picture to start.">🔊</button>
-      <span id="owlHome">Hello! I'm Ollie 🦉 Tap a level to begin.</span></div></div>
-    <div class="card" id="dueCard" style="display:none"><h2>🔁 Tricky words</h2>
+    <div class="owlrow"><div class="owl"><svg aria-hidden="true"><use href="#ollie"/></svg></div>
+      <div class="bubble"><button class="spk" data-say="Hello! I am Ollie. Tap a picture to start." aria-label="Hear Ollie"><svg class="ic" aria-hidden="true"><use href="#i-speaker"/></svg></button>
+      <span id="owlHome">Hello! I'm Ollie. Tap a chapter to begin.</span></div></div>
+    <div class="card" id="dueCard" style="display:none"><p class="sect-label">Keep practicing</p><h2><svg class="ic" aria-hidden="true"><use href="#i-repeat"/></svg> Tricky words</h2>
       <p class="note" style="margin:4px 0 0">Words that need another look. A quick review makes them stick.</p>
       <div class="center" style="margin-top:12px"><button class="btn gold" id="dueBtn"></button></div>
     </div>
     <div class="lvlgrid" id="lvlgrid"></div>
-    <div class="card sightcard"><h2>👁️ Sight words</h2>
+    <div class="card sightcard"><p class="sect-label">Read in a flash</p><h2><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg> Sight words</h2>
       <p class="note" style="margin:4px 0 0">Words to know by heart. Tap to hear them.</p>
       <div class="setpills" id="setpills"></div>
       <div class="sightgrid" id="sightgrid"></div>
-      <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn">🎯 Quiz me</button></div>
+      <div class="center" style="margin-top:12px"><button class="btn coral" id="quizBtn"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg> Quiz me</button></div>
     </div>
-    <div class="card"><h2>🎙️ Say it</h2>
+    <div class="card"><p class="sect-label">Use your voice</p><h2><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg> Say it</h2>
       <p class="note" style="margin:4px 0 0">Say words and sentences out loud!</p>
-      <div class="center" style="margin-top:12px"><button class="btn coral" id="speakBtn">🎙️ Say it out loud</button></div>
+      <div class="center" style="margin-top:12px"><button class="btn coral" id="speakBtn"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg> Say it out loud</button></div>
       <div class="center"><span class="note" id="speakNote"></span></div>
     </div>
-    <div class="card"><h2>👂 Sound pairs</h2>
+    <div class="card"><p class="sect-label">Train your ears</p><h2><svg class="ic" aria-hidden="true"><use href="#i-ear"/></svg> Sound pairs</h2>
       <p class="note" style="margin:4px 0 0">Hear the tiny difference: <i>ship</i> or <i>sheep</i>?</p>
-      <div class="center" style="margin-top:12px"><button class="btn coral" id="pairsBtn">👂 Play sound pairs</button></div>
+      <div class="center" style="margin-top:12px"><button class="btn coral" id="pairsBtn"><svg class="ic" aria-hidden="true"><use href="#i-ear"/></svg> Play sound pairs</button></div>
     </div>
-    <div class="center"><span class="streak" id="streak">🔥 0 day streak</span></div>
+    <div class="center"><span class="streak" id="streak"><svg class="ic" aria-hidden="true"><use href="#i-flame"/></svg> 0 day streak</span></div>
   </main>
 </div>
 
 <!-- QUIZ: sight words -->
 <div class="screen" id="s-quiz">
   <main>
-    <div class="backrow"><button class="backbtn" id="qzBack">← 🏠</button></div>
-    <div class="owlrow"><div class="owl">🦉</div>
-      <div class="bubble"><button class="spk" id="qzSpeak">🔊</button><span id="qzOwl"></span></div></div>
+    <div class="backrow"><button class="backbtn" id="qzBack"><svg class="ic" aria-hidden="true"><use href="#i-arrow-l"/></svg><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg></button></div>
+    <div class="owlrow"><div class="owl"><svg aria-hidden="true"><use href="#ollie"/></svg></div>
+      <div class="bubble"><button class="spk" id="qzSpeak" aria-label="Listen"><svg class="ic" aria-hidden="true"><use href="#i-speaker"/></svg></button><span id="qzOwl"></span></div></div>
     <div id="qzBody"></div>
   </main>
 </div>
@@ -220,9 +515,9 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
 <!-- SPEAK: say it out loud -->
 <div class="screen" id="s-speak">
   <main>
-    <div class="backrow"><button class="backbtn" id="spkBack">← 🏠</button></div>
-    <div class="owlrow"><div class="owl">🦉</div>
-      <div class="bubble"><button class="spk" id="spkSpeak">🔊</button><span id="spkOwl">Say it out loud! 🎙️</span></div></div>
+    <div class="backrow"><button class="backbtn" id="spkBack"><svg class="ic" aria-hidden="true"><use href="#i-arrow-l"/></svg><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg></button></div>
+    <div class="owlrow"><div class="owl"><svg aria-hidden="true"><use href="#ollie"/></svg></div>
+      <div class="bubble"><button class="spk" id="spkSpeak" aria-label="Listen"><svg class="ic" aria-hidden="true"><use href="#i-speaker"/></svg></button><span id="spkOwl">Say it out loud!</span></div></div>
     <div id="spkBody"></div>
   </main>
 </div>
@@ -230,35 +525,41 @@ main{max-width:var(--colw); margin:0 auto; padding:18px 14px;}
 <!-- LEVEL: steps -->
 <div class="screen" id="s-level">
   <main>
-    <div class="backrow"><button class="backbtn" id="backHome">← 🏠</button></div>
-    <div class="owlrow"><div class="owl">🦉</div>
-      <div class="bubble"><button class="spk" id="owlSpeak">🔊</button><span id="owlText"></span></div></div>
+    <div class="backrow"><button class="backbtn" id="backHome"><svg class="ic" aria-hidden="true"><use href="#i-arrow-l"/></svg><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg></button></div>
+    <div class="owlrow"><div class="owl"><svg aria-hidden="true"><use href="#ollie"/></svg></div>
+      <div class="bubble"><button class="spk" id="owlSpeak" aria-label="Listen"><svg class="ic" aria-hidden="true"><use href="#i-speaker"/></svg></button><span id="owlText"></span></div></div>
     <div class="steptabs" id="steptabs"></div>
     <div id="stepbody"></div>
   </main>
 </div>
 
 <!-- graduation -->
-<div id="grad"><div class="gradin"><div class="big">🎓🦉🎉</div>
+<div id="grad"><div class="gradin"><div class="big"><svg class="ic xl" aria-hidden="true"><use href="#i-cap"/></svg><svg class="ollie-mini" aria-hidden="true"><use href="#ollie"/></svg><svg class="ic xl" aria-hidden="true"><use href="#i-star"/></svg></div>
   <h2>You did it!</h2>
   <p>You finished all 9 levels, from your first sound to your first stories. Ollie is so proud of you!</p>
-  <button class="btn coral" id="gradOk">🌟 Keep reading!</button></div></div>
+  <button class="btn coral" id="gradOk"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg> Keep reading!</button></div></div>
 
 <!-- parent gate sheet -->
 <div class="sheet" id="sheet"><div class="sheetin">
-  <h2>⚙️ Grown-ups</h2>
+  <h2><svg class="ic" aria-hidden="true"><use href="#i-gear"/></svg> Grown-ups</h2>
   <p><b>Sounds first:</b> letters come in the <i>s a t i p n …</i> order schools use worldwide: those six letters already make real words like <i>sat</i> and <i>pin</i>. We teach letter sounds before letter names, and every word sounds out from letters already learned. No guessing.</p>
   <p><b>The voice:</b> your device's voice, slowed down for learners. The pure letter sounds come from you: stretch and clip them, no added vowel ("ssss" not "ess", "mmm" not "muh").</p>
-  <p><b>Pace:</b> about 5 minutes per level. Short daily sessions beat long ones. 🌟</p>
-  <h3 style="margin:14px 0 8px">📊 Progress</h3>
+  <p><b>Pace:</b> about 5 minutes per level. Short daily sessions beat long ones.</p>
+  <h3 style="margin:14px 0 8px"><svg class="ic" aria-hidden="true" style="vertical-align:-.2em;color:#6b5b8f"><use href="#i-chart"/></svg> Progress</h3>
   <div id="parentProg"></div>
-  <div style="margin-top:14px"><button class="btn ghost" id="voiceTest">🔊 Test voice</button>
+  <div style="margin-top:14px"><button class="btn ghost" id="voiceTest"><svg class="ic" aria-hidden="true"><use href="#i-speaker"/></svg> Test voice</button>
   <button class="btn coral" id="resetProg">Reset all progress</button></div>
   <button class="btn ghost" id="closeSheet">Close</button>
 </div></div>
 
 <script>
 "use strict";
+/* storybook icon helpers: hand-drawn SVG sprite */
+const ic=n=>`<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const icLg=n=>`<svg class="ic lg" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const icXl=n=>`<svg class="ic xl" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const ollieMini=`<svg class="ollie-mini" aria-hidden="true" style="width:72px;height:72px"><use href="#ollie"/></svg>`;
+const ollieSm=`<svg aria-hidden="true" style="width:64px;height:64px"><use href="#ollie"/></svg>`;
 /* ================= DATA ================= */
 const LEVELS = [
 { id:0, cls:"l1", emo:"🐍🍎🐯", name:"Level 1", desc:"6 sounds · first words",
@@ -470,12 +771,12 @@ const SIGHT_WORDS=[
   {w:"yes",e:"✅",set:8},
 ];
 const STEP_DEFS = [
-  {id:"letters", icon:"🔤", label:"Sounds"},
-  {id:"listen", icon:"👂", label:"Listen"},
-  {id:"blend", icon:"🧩", label:"Build"},
-  {id:"read", icon:"📖", label:"Read"},
-  {id:"write", icon:"✏️", label:"Write"},
-  {id:"story", icon:"📚", label:"Story"},
+  {id:"letters", icon:ic("abc"), label:"Sounds"},
+  {id:"listen", icon:ic("ear"), label:"Listen"},
+  {id:"blend", icon:ic("puzzle"), label:"Build"},
+  {id:"read", icon:ic("book"), label:"Read"},
+  {id:"write", icon:ic("pencil"), label:"Write"},
+  {id:"story", icon:ic("books"), label:"Story"},
 ];
 /* split a word into its sound units (digraphs stay together): rain -> [r,ai,n] */
 const GRAPHEMES = ["ai","oa","ie","ee","or","ng","oo","sh","ch","th","qu","ou","oi","ue","er","ar","air","ear","igh","ck","ff","ll","ss","zz"];
@@ -498,7 +799,7 @@ const OWL_SAY = {
   blend:"Tap the letters, left to right. Then read the word!",
   read:"Read the word… then tap the matching picture.",
   write:"Hear the word… then spell it with the tiles!",
-  story:"You can read a whole story now! Tap 🔊 to hear it.",
+  story:"You can read a whole story now! Tap the speaker to hear it.",
 };
 /* ================= STATE ================= */
 /* Single safe reader for every JSON key: corrupt storage can never blank the app. */
@@ -632,13 +933,17 @@ function bumpStreak(){
   }
 }
 function renderHome(){
-  $("#streak").textContent = `🔥 ${streak.count} day streak`;
+  $("#streak").innerHTML = `${ic("flame")} ${streak.count} day streak`;
   $("#lvlgrid").innerHTML = LEVELS.map((L,i)=>{
     const locked = i>0 && !prog.done.includes(i-1);
-    const stars = prog.stars[i] ? "⭐".repeat(prog.stars[i]) : (locked?"🔒":"");
-    return `<button class="lvl ${L.cls}${locked?" lock":""}" data-lvl="${i}" ${locked?"disabled":""}>
-      <span class="em">${L.emo}</span>
-      <span><span class="nm">${L.name}</span><br><span class="ds">${L.desc}</span></span>
+    const done = prog.stars[i]>=3;
+    const stars = prog.stars[i] ? ic("star").repeat(prog.stars[i]) : (locked?`<span class="lockic">${icLg("lock")}</span>`:"");
+    const trio = (L.emo.match(/\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic}*)*/gu)||[]).slice(0,3).map(e=>`<span class="sticker">${e}</span>`).join("");
+    const here = !locked && !done ? `<span class="youare">start here</span>` : "";
+    return `<button class="lvl ${L.cls}${locked?" lock":""}${done?" done":""}" data-lvl="${i}" ${locked?"disabled":""}>
+      ${here}<span class="chap">${i+1}</span>
+      <span class="em">${trio}</span>
+      <span class="tx"><span class="nm">${L.name}</span><br><span class="ds">${L.desc}</span></span>
       <span class="st">${stars}</span></button>`;
   }).join("");
   const sets=[...new Set(SIGHT_WORDS.map(s=>s.set))].sort((a,b)=>a-b);
@@ -647,13 +952,13 @@ function renderHome(){
     ...sets.map(n=>`<button class="setpill${sightSet===n?" on":""}" data-set="${n}">Set ${n}</button>`)].join("");
   const vis = sightSet===0 ? SIGHT_WORDS : SIGHT_WORDS.filter(s=>s.set===sightSet);
   $("#sightgrid").innerHTML = vis.map(s=>
-    `<button class="sw" data-say="${s.w}">${s.e?`<span class="swe">${s.e}</span>`:`<span class="swe spkcue" aria-hidden="true">🔊</span>`}<span class="sww">${s.w}</span></button>`).join("");
+    `<button class="sw" data-say="${s.w}">${s.e?`<span class="swe">${s.e}</span>`:`<span class="swe spkcue" aria-hidden="true">${ic("speaker")}</span>`}<span class="sww">${s.w}</span></button>`).join("");
   const due=srsDue();
   const dc=$("#dueCard");
   if(due.length){
     dc.style.display="";
     const db=$("#dueBtn");
-    db.textContent=`🔁 Review ${due.length} word${due.length===1?"":"s"}`;
+    db.innerHTML=`${ic("repeat")} Review ${due.length} word${due.length===1?"":"s"}`;
     db.onclick=()=>startQuiz({bank:adaptivePool(due.slice(0,10),"review"),kind:"review"});
   } else dc.style.display="none";
 }
@@ -675,8 +980,8 @@ function stepLetters(){
   const L=LEVELS[cur];
   $("#stepbody").innerHTML = `<div class="lettergrid">`+L.letters.map((c,i)=>
     `<button class="lcard" data-li="${i}"><div class="L">${c.l}</div><div class="E">${c.e}</div><div class="W">${c.w}</div>
-     <span class="spkmini">🔊</span></button>`).join("")+`</div>
-     <div class="center" style="margin-top:14px"><button class="btn coral" id="nextStep">Next →</button></div>`;
+     <span class="spkmini">${ic("speaker")}</span></button>`).join("")+`</div>
+     <div class="center" style="margin-top:14px"><button class="btn coral" id="nextStep">Next <svg class="ic" aria-hidden="true"><use href="#i-arrow-r"/></svg></button></div>`;
   $("#stepbody").querySelectorAll(".lcard").forEach(b=>b.onclick=()=>{
     const c=L.letters[+b.dataset.li]; say(c.w);
   });
@@ -696,9 +1001,9 @@ function gameRound(kind){
       if(!opts.includes(c)) opts.push(c); }
     shuf(opts);
     body.innerHTML = (kind==="read"
-      ? `<div class="bigword"><div class="w">${target.w}</div><button class="spk" id="rwSay">🔊 hear it</button></div>`
-      : `<div class="bigword"><button class="spk" id="rwSay" style="font-size:26px">🔊</button></div>
-         <div class="center note">Tap 🔊 to hear the word</div>`)
+      ? `<div class="bigword"><div class="w">${target.w}</div><button class="spk" id="rwSay">${ic("speaker")} hear it</button></div>`
+      : `<div class="bigword"><button class="spk" id="rwSay">${icLg("speaker")}</button></div>
+         <div class="center note">Tap the speaker to hear the word</div>`)
       + `<div class="choices">`+opts.map(o=>`<button class="choice" data-w="${o.w}">${o.e}</button>`).join("")+`</div>
       <div class="center note" style="margin-top:10px">${idx+1} / ${words.length}</div>`;
     /* Listen is audio-first: the written word stays off the hear button so the
@@ -716,7 +1021,7 @@ function gameRound(kind){
       if(answered) return; /* stray/double taps after the answer can't pile on (matches quizPick's qz.answered) */
       if(ch.dataset.w===target.w){ answered=true; ch.classList.add("right"); ok++; srsRecord(target.w,firstTry); say("Yes! "+target.w,false);
         /* listen mode: reveal the spelling now that the ear did the work */
-        if(kind==="listen"){ const s=document.querySelector("#rwSay"); if(s) s.textContent="🔊 "+target.w; }
+        if(kind==="listen"){ const s=document.querySelector("#rwSay"); if(s) s.innerHTML=`${ic("speaker")} ${target.w}`; }
         later(900,()=>{idx++;round();}); }
       else { ch.classList.add("wrong"); firstTry=false; say("Try again"); later(450,()=>ch.classList.remove("wrong")); }
     });
@@ -729,11 +1034,11 @@ function gameRound(kind){
        child taps "I did it!" in Story. (v28) */
     (prog.steps[cur]=prog.steps[cur]||{})[kind]=true;
     save(); bumpStreak();
-    body.innerHTML=`<div class="card starscreen"><div class="big">${"⭐".repeat(stars)}</div>
+    body.innerHTML=`<div class="card starscreen"><div class="big"><svg class="ic xl" aria-hidden="true"><use href="#i-star"/></svg></div><div class="stars">${ic("star").repeat(stars)}</div>
       <h2>${["","Great!","Wonderful!","Amazing!"][stars]}</h2>
       <p style="color:var(--muted)">${ok} of ${words.length} correct</p>
-      <button class="btn coral" id="goNext">${kind==="listen"?"Next: Build 🧩":(kind==="read"?"Next: Write ✏️":"Next: Story 📚")}</button>
-      <div><button class="btn ghost" id="goHome2">🏠 Levels</button></div></div>`;
+      <button class="btn coral" id="goNext">${kind==="listen"?`Next: Build ${ic("puzzle")}`:(kind==="read"?`Next: Write ${ic("pencil")}`:`Next: Story ${ic("books")}`)}</button>
+      <div><button class="btn ghost" id="goHome2">${ic("home")} Chapters</button></div></div>`;
     say(["","Great!","Wonderful!","Amazing!"][stars]);
     $("#goNext").onclick=()=>{ step = kind==="listen"?"blend":(kind==="read"?"write":"story"); renderLevel(); };
     $("#goHome2").onclick=()=>{ renderHome(); show("s-home"); };
@@ -749,15 +1054,15 @@ function stepBlend(){
   function round(){
     if(idx>=words.length){
       (prog.steps[cur]=prog.steps[cur]||{}).blend=true; save(); bumpStreak();
-      body.innerHTML=`<div class="card starscreen"><div class="big">🧩</div><h2>You built ${words.length} words!</h2>
-        <button class="btn coral" id="goRead">Next: Read 📖</button></div>`;
+      body.innerHTML=`<div class="card starscreen"><div class="big">${icXl("puzzle")}</div><h2>You built ${words.length} words!</h2>
+        <button class="btn coral" id="goRead">Next: Read ${ic("book")}</button></div>`;
       $("#goRead").onclick=()=>{ step="read"; renderLevel(); }; return;
     }
     const t=words[idx];
     const taughtGraphs=L.letters.filter(c=>c.l.length>1).map(c=>c.l.toLowerCase());
     body.innerHTML=`<div class="center" style="font-size:64px;margin:6px 0">${t.e}</div>
       <div class="tiles" id="tiles">`+segWord(t.w,taughtGraphs).map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
-      <div class="center"><button class="btn" id="sayWord">🔊 ${t.w}</button></div>
+      <div class="center"><button class="btn" id="sayWord">${ic("speaker")} ${t.w}</button></div>
       <div class="center note" style="margin-top:8px">Tap each letter left to right 👉</div>
       <div class="center note">${idx+1} / ${words.length}</div>`;
     const tiles=[...body.querySelectorAll(".tile")];
@@ -788,8 +1093,8 @@ function stepWrite(){
   function round(){
     if(idx>=words.length){
       (prog.steps[cur]=prog.steps[cur]||{}).write=true; save(); bumpStreak();
-      body.innerHTML=`<div class="card starscreen"><div class="big">✏️</div><h2>You spelled ${words.length} words!</h2>
-        <button class="btn coral" id="goStory">Next: Story 📚</button></div>`;
+      body.innerHTML=`<div class="card starscreen"><div class="big">${icXl("pencil")}</div><h2>You spelled ${words.length} words!</h2>
+        <button class="btn coral" id="goStory">Next: Story ${ic("books")}</button></div>`;
       $("#goStory").onclick=()=>{ step="story"; renderLevel(); }; return;
     }
     const t=words[idx];
@@ -804,7 +1109,7 @@ function stepWrite(){
     }
     const picked=[]; let firstTry=true; let done=false;
     body.innerHTML=`<div class="center" style="font-size:64px;margin:6px 0">${t.e}</div>
-      <div class="center"><button class="btn" id="hearWord">🔊 Hear the word</button></div>
+      <div class="center"><button class="btn" id="hearWord">${ic("speaker")} Hear the word</button></div>
       <div class="center" style="margin:12px 0;min-height:52px"><div class="tiles" id="answer"></div></div>
       <div class="tiles" id="tiles">`+scrambled.map((ch,i)=>`<button class="tile" data-i="${i}">${ch}</button>`).join("")+`</div>
       <div class="center" style="margin-top:10px">
@@ -847,14 +1152,14 @@ function stepWrite(){
       const attempt=picked.join("").toLowerCase();
       if(attempt===t.w.toLowerCase()){
         done=true;
-        fb.textContent="⭐ Yes! "+t.w;
+        fb.innerHTML=`${ic("star")} Yes! ${t.w}`;
         fb.style.color="var(--gold)";
         say("Yes! "+t.w);
         srsRecord(t.w,firstTry);
         later(1200,()=>{ idx++; round(); });
       }else{
         firstTry=false;
-        fb.textContent="Try again! Tap 🔊 to hear it.";
+        fb.innerHTML=`Try again! Tap the speaker to hear it.`;
         fb.style.color="var(--coral)";
         say("Try again. "+t.w);
         /* after two failed attempts, show the spelling as a model */
@@ -886,11 +1191,11 @@ function stepStory(){
   const L=LEVELS[cur];
   $("#stepbody").innerHTML = L.story.map((s,i)=>
     `<div class="story"><span class="se">${s.e}</span><span class="st2">${s.t}</span>
-     <button class="spk" data-si="${i}">🔊</button></div>`).join("")
+     <button class="spk" data-si="${i}">${ic("speaker")}</button></div>`).join("")
     + `<div class="center" style="margin-top:14px"><button class="btn gold" id="talkBtn">💬 Let's talk about it!</button></div>`
-    + `<div class="center" style="margin-top:10px"><button class="btn coral" id="finishLvl">⭐ I did it!</button></div>`
+    + `<div class="center" style="margin-top:10px"><button class="btn coral" id="finishLvl">${ic("star")} I did it!</button></div>`
     + `<div class="center note" id="lvlNote" style="min-height:22px;margin-top:6px"></div>`
-    + `<div class="center" style="margin-top:10px"><button class="btn ghost" id="lvlQuiz">🎯 Quiz me on these words</button></div>`;
+    + `<div class="center" style="margin-top:10px"><button class="btn ghost" id="lvlQuiz">${ic("target")} Quiz me on these words</button></div>`;
   $("#stepbody").querySelectorAll(".spk").forEach(b=>b.onclick=()=>say(L.story[+b.dataset.si].t));
   /* later(), not raw setTimeout: if the child taps another step tab or goes
      home within 700ms, the auto-speak dies with this screen instead of
@@ -900,7 +1205,7 @@ function stepStory(){
     /* The level counts only when the child really did the work: every one of the
        four practice steps must be finished before "I did it!" can complete the level.
        Stars were already earned in the Listen/Read rounds; the button grants none. */
-    const NEED={listen:"👂 Listen",blend:"🧩 Build",read:"📖 Read",write:"✏️ Write"};
+    const NEED={listen:`${ic("ear")} Listen`,blend:`${ic("puzzle")} Build`,read:`${ic("book")} Read`,write:`${ic("pencil")} Write`};
     /* spoken step names: the audio must use the child-facing names ("Build"),
        never the raw step keys ("blend" is not a word anywhere in the UI) */
     const NEED_SAY={listen:"Listen",blend:"Build",read:"Read",write:"Write"};
@@ -1115,10 +1420,10 @@ function renderQuizQ(){
     others=shuf([...qz.bank].filter(x=>x.w!==target.w)).slice(0,3);
   }
   const opts=shuf([target,...others]);
-  $("#qzOwl").textContent="Tap the word you hear! 👂";
+  $("#qzOwl").innerHTML=`Tap the word you hear! ${ic("ear")}`;
   $("#qzBody").innerHTML=`<div class="center"><span class="note">${qz.idx+1} of ${qz.pool.length}</span>
-    &nbsp;<span style="font-size:20px">${"⭐".repeat(qz.stars)}</span></div>
-    <div class="center" style="margin-top:10px"><button class="btn ghost" id="qzHear">🔊 Hear it again</button></div>
+    &nbsp;<span style="font-size:20px;color:#e09a12">${ic("star").repeat(qz.stars)}</span></div>
+    <div class="center" style="margin-top:10px"><button class="btn ghost" id="qzHear">${ic("speaker")} Hear it again</button></div>
     <div class="qzgrid" id="qzOpts">${opts.map((x,i)=>`<button class="sw qzbtn" data-qz="${i}">${x.e?`<span class="swe">${x.e}</span>`:""}<span class="sww">${x.w}</span></button>`).join("")}</div>`;
   $("#qzHear").onclick=()=>say("Find: "+target.w);
   $("#qzBody").querySelectorAll("[data-qz]").forEach(b=>b.onclick=()=>quizPick(+b.dataset.qz,opts,target,b));
@@ -1152,11 +1457,11 @@ function renderQuizDone(){
   if(qk.adaptKey){
     const a=adaptGet(); a[qk.adaptKey]=qzDone.miss||0; adaptSet(a);
   }
-  $("#qzBody").innerHTML=`<div class="qzdone"><div class="big">${qzDone.stars>=4?"🎉":"💪"}</div>
-    <h2>You earned ${qzDone.stars} star${qzDone.stars===1?"":"s"}! ⭐</h2>
+  $("#qzBody").innerHTML=`<div class="qzdone"><div class="big">${icXl("star")}</div>
+    <h2>You earned ${qzDone.stars} star${qzDone.stars===1?"":"s"}! ${ic("star")}</h2>
     ${qk.smartNote?'<p class="note">🧠 Smart practice: next round adjusts to you!</p>':""}
-    <button class="btn coral" id="qzAgain">🎯 Play again</button>
-    <div style="margin-top:10px"><button class="btn ghost" id="qzHome">← 🏠</button></div></div>`;
+    <button class="btn coral" id="qzAgain">${ic("target")} Play again</button>
+    <div style="margin-top:10px"><button class="btn ghost" id="qzHome">${ic("arrow-l")} ${ic("home")}</button></div></div>`;
   const starWord = qk.starLabel;
   say(qzDone.stars>=4?`Amazing! You are a ${starWord}!`:"Good trying! Practice makes perfect!");
   $("#qzAgain").onclick=()=>startQuiz(qzDone.config);
@@ -1189,7 +1494,7 @@ function startSpeak(){
   const wpool=shuf([...words]).slice(0,3).map(x=>({t:x.w,k:x.w,e:x.e,word:x.w}));
   const spool=shuf([...SPEAK_SENTENCES]).slice(0,3);
   spk={pool:shuf([...wpool,...spool]),idx:0,stars:0,firstTry:true,target:null,rec:null,listening:false};
-  $("#spkOwl").textContent="Say it out loud! 🎙️";
+  $("#spkOwl").textContent="Say it out loud!";
   renderSpeakQ(); show("s-speak");
 }
 function renderSpeakQ(){
@@ -1197,11 +1502,11 @@ function renderSpeakQ(){
   const target=spk.pool[spk.idx]; spk.target=target; spk.firstTry=true; spk.answered=false;
   const label = target.word ? target.word : target.t;
   $("#spkBody").innerHTML=`<div class="card starscreen">
-    <div class="center note">${spk.idx+1} of ${spk.pool.length} &nbsp;<span style="font-size:20px">${"⭐".repeat(spk.stars)}</span></div>
+    <div class="center note">${spk.idx+1} of ${spk.pool.length} &nbsp;<span style="font-size:20px;color:#e09a12">${ic("star").repeat(spk.stars)}</span></div>
     <div style="font-size:64px">${target.e}</div>
     <div class="spkword">${label}</div>
-    <div class="center"><button class="btn ghost" id="spkHear">🔊 Hear it</button></div>
-    <div class="center" style="margin-top:10px"><button class="micbtn" id="spkMic">🎙️</button></div>
+    <div class="center"><button class="btn ghost" id="spkHear">${ic("speaker")} Hear it</button></div>
+    <div class="center" style="margin-top:10px"><button class="micbtn" id="spkMic" aria-label="Speak">${icXl("mic")}</button></div>
     <div class="center note">Tap the mic and say it!</div>
     <div class="center spkheard" id="spkHeard"></div>
     <div class="center" id="spkFb" style="min-height:26px;font-weight:700"></div></div>`;
@@ -1215,7 +1520,7 @@ function speakListen(){
   let rec; try{ rec=new SR(); }catch(e){ $("#spkFb").textContent="Voice input is not available."; return; }
   spk.rec=rec; spk.listening=true;
   const mic=$("#spkMic"); if(mic) mic.classList.add("live");
-  $("#spkFb").textContent="Listening… 👂"; $("#spkHeard").textContent="";
+  $("#spkFb").innerHTML=`Listening… ${ic("ear")}`; $("#spkHeard").textContent="";
   rec.lang="en-US"; rec.interimResults=true; rec.maxAlternatives=1;
   rec.onresult=(ev)=>{
     if(!spk||spk.rec!==rec) return; /* stale session: teardown or nav already happened */
@@ -1231,7 +1536,7 @@ function speakListen(){
     if(ev.error==="aborted") return; /* our own teardown (speakHeard success path), not a real failure */
     if(!spk||spk.rec!==rec) return;
     stopSpeakRec();
-    $("#spkFb").textContent = ev.error==="not-allowed" ? "Microphone is blocked. Allow it to play! 🎙️"
+    $("#spkFb").innerHTML = ev.error==="not-allowed" ? `Microphone is blocked. Allow it to play! ${ic("mic")}`
       : ev.error==="network" ? "I could not hear you. Check your internet and try again."
       : "I did not catch that. Try again!";
   };
@@ -1250,22 +1555,22 @@ function speakHeard(heard){
     spk.answered=true; /* a correct answer inside the 400ms auto-speak window
       must kill the pending "Say: X" timer, or it talks over the "Yes!" feedback */
     if(spk.firstTry) spk.stars++;
-    $("#spkFb").textContent="Yes! ⭐";
+    $("#spkFb").innerHTML=`Yes! ${ic("star")}`;
     say("Yes! "+(target.word||target.t));
     setTimeout(()=>{ if(!spk) return; spk.idx++; spk.idx>=spk.pool.length?renderSpeakDone():renderSpeakQ(); },1400);
   }else{
     spk.firstTry=false;
-    $("#spkFb").textContent="Almost! Listen and try again 💪";
+    $("#spkFb").textContent="Almost! Listen and try again.";
     say("Listen: "+(target.word||target.t));
   }
 }
 function renderSpeakDone(){
   const d=spk; spk=null;
-  $("#spkBody").innerHTML=`<div class="card starscreen"><div class="big">${d.stars>=4?"🎉":"💪"}</div>
-    <h2>You earned ${d.stars} star${d.stars===1?"":"s"}! ⭐</h2>
+  $("#spkBody").innerHTML=`<div class="card starscreen"><div class="big">${icXl("star")}</div>
+    <h2>You earned ${d.stars} star${d.stars===1?"":"s"}! ${ic("star")}</h2>
     <p class="note">Great speaking practice! 🗣️</p>
-    <button class="btn coral" id="spkAgain">🎙️ Play again</button>
-    <div style="margin-top:10px"><button class="btn ghost" id="spkHome">← 🏠</button></div></div>`;
+    <button class="btn coral" id="spkAgain">${ic("mic")} Play again</button>
+    <div style="margin-top:10px"><button class="btn ghost" id="spkHome">${ic("arrow-l")} ${ic("home")}</button></div></div>`;
   say(d.stars>=4?"Amazing speaking!":"Good trying! Practice makes perfect!");
   $("#spkAgain").onclick=()=>startSpeak();
   $("#spkHome").onclick=()=>{ renderHome(); show("s-home"); };
@@ -1504,14 +1809,14 @@ function renderParentProg(){
     const locked = i>0 && !prog.done.includes(i-1);
     /* per-step progress for the parent: which practice steps the child has finished */
     const have = (prog.steps&&prog.steps[i])||{};
-    const bits = [["listen","👂"],["blend","🧩"],["read","📖"],["write","✏️"]]
+    const bits = [["listen",ic("ear")],["blend",ic("puzzle")],["read",ic("book")],["write",ic("pencil")]]
       .map(([k,ic])=>ic+(have[k]?"✓":"·")).join(" ");
     /* step marks share the desc line: one compact row per level, no forced second line */
-    return `<div class="prow"><span><b>Level ${i+1}</b> <span class="pnote">${L.desc}</span>${done?"":` <span class="pnote">${bits}</span>`}</span><span class="pstars">${done?"⭐".repeat(st)+"☆".repeat(Math.max(0,3-st)):(locked?"🔒":"▶")}</span></div>`;
+    return `<div class="prow"><span><b>Level ${i+1}</b> <span class="pnote">${L.desc}</span>${done?"":` <span class="pnote">${bits}</span>`}</span><span class="pstars">${done?ic("star").repeat(st)+`<span style="opacity:.25;display:inline-flex;gap:1px">${ic("star").repeat(Math.max(0,3-st))}</span>`:(locked?ic("lock"):ic("play"))}</span></div>`;
   }).join("");
-  const grad = lsGet("fe_grad") ? `<div class="pgrad">🎓 All 9 levels complete!</div>` : "";
+  const grad = lsGet("fe_grad") ? `<div class="pgrad">${ic("cap")} All 9 chapters complete!</div>` : "";
   $("#parentProg").innerHTML = `<div class="pgrid">${rows}</div>${grad}
-    <div class="pfoot">🔥 ${streak.count} day streak · 📝 ${SIGHT_WORDS.length} sight words · 🔁 ${srsDue().length} due for review</div>${renderTogether()}`;
+    <div class="pfoot">${ic("flame")} ${streak.count} day streak · ${SIGHT_WORDS.length} sight words · ${ic("repeat")} ${srsDue().length} due for review</div>${renderTogether()}`;
   const tgBtn=$("#tgDone");
   if(tgBtn) tgBtn.onclick=()=>{ const tg=togetherGet(); tg[tonightIdea().id]=1; togetherSet(tg); renderParentProg(); };
 }
